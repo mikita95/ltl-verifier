@@ -25,7 +25,7 @@ public class State {
         final Map<Integer, Edge> edges = Edge.fromDiagram(d);
 
         return d.getWidget().stream()
-                .filter(widget -> "State".equals(widget.getType()))
+                .filter(widget -> "StateKripke".equals(widget.getType()))
                 .map(widget -> State.of(widget, edges))
                 .collect(Collectors.toMap(State::getId, Function.identity()));
     }

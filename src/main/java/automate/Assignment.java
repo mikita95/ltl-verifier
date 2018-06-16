@@ -2,7 +2,6 @@ package automate;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.Getter;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.lang.Nullable;
@@ -15,7 +14,6 @@ import java.util.stream.Collectors;
 
 @Data(staticConstructor = "of")
 @AllArgsConstructor(staticName = "of")
-@Getter
 @Setter
 public class Assignment {
     private Variable variable;

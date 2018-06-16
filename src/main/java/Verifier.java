@@ -1,6 +1,7 @@
 import automate.DiagramAutomate;
 import diagram.Diagram;
 import diagram.Parser;
+import ltl.ParserRunner;
 
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -13,5 +14,7 @@ public class Verifier {
         System.out.println(d.toString());
         System.out.println(d.getName());
         System.out.println(diagramAutomate.toString());
+        ParserRunner.parseFormula("q");
+
     }
 }

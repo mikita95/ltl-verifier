@@ -21,6 +21,10 @@ public class Variable {
     private String name;
     private boolean isVolatile;
 
+    public static Variable of(final String name) {
+        return Variable.of(name, false);
+    }
+
     public static AbstractMap.SimpleEntry<Variable, Integer> parseDeclaration(@Nullable final String declaration) {
         final String[] decl = StringUtils.removeEnd(declaration
                         .replaceFirst("volatile ", "")
