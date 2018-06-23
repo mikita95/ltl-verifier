@@ -25,6 +25,7 @@ public class ModelKripke {
     private Map<StateKripke, Set<StateKripke>> transitions;
 
     public static ModelKripke fromDiagramAutomate(final DiagramAutomate automate) {
+        // TODO: refactore
         final Map<State, List<StateEvent>> transitions = automate.getStates()
                 .values()
                 .stream()
