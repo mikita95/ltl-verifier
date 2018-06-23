@@ -1,6 +1,7 @@
 package buchi;
 
 import automate.Variable;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
@@ -9,11 +10,12 @@ import kripke.StateKripke;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Setter;
+import ltl.Prop;
 
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 @Data(staticConstructor = "of")
 @AllArgsConstructor(staticName = "of")
@@ -22,6 +24,10 @@ public class BuchiAutomate<S, T> {
     private BuchiState<S> initState;
     private Map<BuchiState<S>, Multimap<T, BuchiState<S>>> transitions;
     private Set<Set<BuchiState<S>>> acceptingFamily;
+
+    public BuchiAutomate() {
+
+    }
 
     public Set<BuchiState<S>> nodes() {
         return transitions.keySet();
@@ -33,7 +39,7 @@ public class BuchiAutomate<S, T> {
 
     public BuchiAutomate<StateKripke, Set<Variable>> of(final ModelKripke modelKripke) {
         Map<StateKripke, BuchiState<StateKripke>> buchiStateByKripkeState = modelKripke.getStateKripkes().stream()
-                .collect(Collectors.toMap(Function.identity(), BuchiState::of));
+                .collect(Collectors.toMap(Function.identity(), BuchiState::new));
 
 
         Map<BuchiState, Multimap> transitions = modelKripke.getStateKripkes().stream().collect(Collectors.toMap(
@@ -60,69 +66,69 @@ public class BuchiAutomate<S, T> {
         return builder.build();
     }
 
-  /*  public <E> BuchiAutomate<E, Set<Prop>> variableAutomatonToPropAutomaton(BuchiAutomate<E, Set<Variable>> variableAutomate) {
-        for (val entry: variableAutomate.getTransitions().entrySet()) {
-            val state = entry.getKey();
-            val map = entry.getValue();
+    public <E> BuchiAutomate<E, Set<Prop>> variableAutomatonToPropAutomaton(BuchiAutomate<E, Set<Variable>> variableAutomate) {
+        final ImmutableMap.Builder<BuchiState<E>, Multimap<Set<Prop>, BuchiState<E>>> transBuilder = ImmutableMap.builder();
 
-            val builder = ImmutableMultimap.builder();
-            map.entries().stream()
-                    .forEach(edge -> {
-                        builder.put(
-                                edge.getKey().stream().map(v -> new Prop(v.getName())).collect(Collectors.toSet()),
-                                edge.getValue()
-                        );
-                    });
+        for (Map.Entry<BuchiState<E>, Multimap<Set<Variable>, BuchiState<E>>> entry : variableAutomate.getTransitions().entrySet()) {
+            final BuchiState<E> state = entry.getKey();
+            final Multimap<Set<Variable>, BuchiState<E>> map = entry.getValue();
 
+            final ImmutableMultimap.Builder<Set<Prop>, BuchiState<E>> builder = ImmutableMultimap.builder();
+            map.entries()
+                    .forEach(edge -> builder.put(
+                            edge.getKey().stream().map(v -> new Prop(v.getName())).collect(Collectors.toSet()),
+                            edge.getValue()
+                    ));
 
+            transBuilder.put(state, builder.build());
         }
 
-        variableAutomate.getTransitions().replaceAll(
-                (k, trs) -> {
-                    final Set<Prop> props = trs.entries().stream().map((entry) -> entry.getKey().stream().map(v -> new Prop(v.getName())).collect(Collectors.toSet()));
+        final BuchiAutomate<E, Set<Prop>> result = new BuchiAutomate<>();
+        result.setInitState(variableAutomate.getInitState());
+        result.setAcceptingFamily(variableAutomate.getAcceptingFamily());
+        result.setTransitions(transBuilder.build());
+
+        return result;
+    }
+
+    public static <S, T> BuchiAutomate<S, T> degeneralize(BuchiAutomate<S, T> buchiAutomate) {
+        if (!buchiAutomate.isGeneralized()) {
+            return buchiAutomate;
+        }
+
+        List<Set<BuchiState<S>>> fs = new ArrayList<>(buchiAutomate.getAcceptingFamily());
+        List<LayerBuchiState<S>> newStates = IntStream.of(fs.size()).boxed().flatMap(layer ->
+            buchiAutomate.nodes().stream().map(state -> new LayerBuchiState<>(layer, state))
+        ).collect(Collectors.toList());
+
+        Map<BuchiState<S>, Multimap<T, BuchiState<S>>> transitions = newStates.stream().collect(Collectors.toMap(
+                Function.identity(),
+                state -> {
+                    final int nextLayer = (state.getLayer() + 1) % fs.size();
+                    ImmutableMultimap.Builder<T, BuchiState<S>> builder = ImmutableMultimap.builder();
+                    buchiAutomate.getTransitions().get(state.getOrigin()).entries().stream().map(
+                            entry -> {
+                                LayerBuchiState<S> resultState;
+                                if (fs.get(state.getLayer()).contains(state.getOrigin())) {
+                                    resultState = newStates.stream().filter(lb -> lb.getLayer() == nextLayer && Objects.equals(lb.getOrigin(), entry.getValue())).findFirst().orElse(null);
+                                } else {
+                                    resultState = newStates.stream().filter(lb -> Objects.equals(lb.getLayer(), state.getLayer()) && Objects.equals(lb.getOrigin(), entry.getValue())).findFirst().orElse(null);
+                                }
+
+                                return new AbstractMap.SimpleEntry<>(
+                                        entry.getKey(),
+                                        resultState
+                                );
+                            }).forEach(entry -> builder.put(entry.getKey(), entry.getValue())
+                    );
+                    return builder.build();
                 }
-        );
-    }*/
+        ));
 
-    /*
-    fun <E> variableAutomatonToPropAutomaton(variableAutomaton: BuchiAutomaton<E, Set<Variable>>)
-    : BuchiAutomaton<E, Set<Prop>> {
-    val transitions = variableAutomaton.transitions.mapValues { (_, trs) ->
-        trs.map { (vars, toState) -> vars.map { Prop(it.name) }.toSet() to toState }
+        BuchiAutomate<S, T> result = new BuchiAutomate<>();
+        result.setInitState(newStates.stream().filter(s -> s.getLayer() == 0 && Objects.equals(s.getOrigin(), buchiAutomate.getInitState())).findFirst().orElse(null));
+        result.setTransitions(transitions);
+        result.setAcceptingFamily(ImmutableSet.of(newStates.stream().filter(s -> fs.get(0).contains(s)).collect(Collectors.toSet())));
+        return result;
     }
-    return BuchiAutomaton(variableAutomaton.initialState, transitions, variableAutomaton.acceptingFamily)
-}
-
-fun <A, B> crossIgnoringProps(aa: BuchiAutomaton<A, Set<Prop>>,
-                              xx: BuchiAutomaton<B, Set<Prop>>,
-                              propsIgnoredInXx: Set<Prop>)
-    : BuchiAutomaton<Pair<BuchiState<A>, BuchiState<B>>, Set<Prop>> {
-
-    val nodes = aa.nodes.flatMap { a ->
-        xx.nodes.map { x ->
-            BuchiState(a to x)
-        }
-    }
-
-    val transitions = nodes.associate { ax ->
-        val (a, x) = ax.tag
-        ax to nodes.flatMap { by ->
-            val (b, y) = by.tag
-            val abTransitionLabels = aa.transitions[a]!!.filter { (_, to) -> to == b }.map { (label, _) -> label }
-            val xyTransitionLabels = xx.transitions[x]!!.filter { (_, to) -> to == y }.map { (label, _) -> label }
-            abTransitionLabels.filter { it - propsIgnoredInXx in xyTransitionLabels }.map { tag -> tag to by }
-        }
-    }
-
-    val initialState = nodes.single { node ->
-        val (a, x) = node.tag
-        aa.initialState == a && xx.initialState == x
-    }
-
-    return BuchiAutomaton(
-        initialState,
-        transitions,
-        xx.acceptingFamily.map { f -> nodes.filter { n -> n.tag.second in f }.toSet() }.toSet())
-}
-     */
 }

@@ -5,7 +5,7 @@ import lombok.Data;
 import lombok.Setter;
 
 @Data(staticConstructor = "of")
-@AllArgsConstructor(staticName = "of")
+@AllArgsConstructor
 @Setter
 public class BuchiState<E> {
     private E tag;
