@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 @AllArgsConstructor(staticName = "of")
 @Setter
 public class Variable {
-    private String name;
+    public String name;
     private boolean isVolatile;
 
     public static Variable of(final String name) {

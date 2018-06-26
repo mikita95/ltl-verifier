@@ -1,5 +1,7 @@
 package ltl
 
+import scala.collection.mutable
+
 trait Formula {
 
   def subformulas: Set[Formula] = Set(this) ++ {this match {
@@ -19,7 +21,7 @@ trait Formula {
     }
   }
 
-
+  def variables() :Set[Prop] = Set()
 
 }
 
@@ -40,6 +42,10 @@ class TRUE extends Formula
 class FALSE extends Formula
 
   object tmp {
+
+    def negation(formula: Formula) :Formula = formula
+
+    def allSubsets[T](set: Set[T]): List[Set[T]] = Nil
 
     def negationNormalForm(formula: Formula): Formula = formula match {
       case p: Not =>
