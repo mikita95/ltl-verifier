@@ -34,7 +34,7 @@ public class BuchiAutomate<S, T> {
         return transitions.keySet();
     }
 
-    public boolean isGeneralized() {
+    public boolean isMultiAccepting() {
         return acceptingFamily.size() > 1;
     }
 
@@ -93,7 +93,7 @@ public class BuchiAutomate<S, T> {
     }
 
     public static <S, T> BuchiAutomate<S, T> degeneralize(BuchiAutomate<S, T> buchiAutomate) {
-        if (!buchiAutomate.isGeneralized()) {
+        if (!buchiAutomate.isMultiAccepting()) {
             return buchiAutomate;
         }
 
