@@ -5,19 +5,19 @@ import lombok.ToString;
 import java.util.Objects;
 
 @ToString
-public class LayerBuchiState<E> extends BuchiState<E> {
+public class TagedBuchiState<E> extends BuchiState<E> {
 
     private BuchiState<E> origin;
-    private Integer layer;
+    private Integer number;
 
-    public LayerBuchiState(Integer layer, BuchiState<E> origin) {
+    public TagedBuchiState(Integer layer, BuchiState<E> origin) {
         super(origin.getTag());
-        this.layer = layer;
+        this.number = layer;
         this.origin = origin;
     }
 
-    public Integer getLayer() {
-        return layer;
+    public Integer getNumber() {
+        return number;
     }
 
     public BuchiState<E> getOrigin() {
@@ -29,14 +29,14 @@ public class LayerBuchiState<E> extends BuchiState<E> {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
-        LayerBuchiState<?> that = (LayerBuchiState<?>) o;
+        TagedBuchiState<?> that = (TagedBuchiState<?>) o;
         return Objects.equals(origin, that.origin) &&
-                Objects.equals(layer, that.layer);
+                Objects.equals(number, that.number);
     }
 
     @Override
     public int hashCode() {
 
-        return Objects.hash(super.hashCode(), origin, layer);
+        return Objects.hash(super.hashCode(), origin, number);
     }
 }

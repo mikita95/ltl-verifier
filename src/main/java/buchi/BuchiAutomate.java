@@ -10,6 +10,7 @@ import kripke.StateKripke;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Setter;
+import ltl.Formula;
 import ltl.Prop;
 
 import java.util.*;
@@ -97,22 +98,22 @@ public class BuchiAutomate<S, T> {
         }
 
         List<Set<BuchiState<S>>> fs = new ArrayList<>(buchiAutomate.getAcceptingFamily());
-        List<LayerBuchiState<S>> newStates = IntStream.of(fs.size()).boxed().flatMap(layer ->
-            buchiAutomate.nodes().stream().map(state -> new LayerBuchiState<>(layer, state))
+        List<TagedBuchiState<S>> newStates = IntStream.of(fs.size()).boxed().flatMap(layer ->
+            buchiAutomate.nodes().stream().map(state -> new TagedBuchiState<>(layer, state))
         ).collect(Collectors.toList());
 
         Map<BuchiState<S>, Multimap<T, BuchiState<S>>> transitions = newStates.stream().collect(Collectors.toMap(
                 Function.identity(),
                 state -> {
-                    final int nextLayer = (state.getLayer() + 1) % fs.size();
+                    final int nextLayer = (state.getNumber() + 1) % fs.size();
                     ImmutableMultimap.Builder<T, BuchiState<S>> builder = ImmutableMultimap.builder();
                     buchiAutomate.getTransitions().get(state.getOrigin()).entries().stream().map(
                             entry -> {
-                                LayerBuchiState<S> resultState;
-                                if (fs.get(state.getLayer()).contains(state.getOrigin())) {
-                                    resultState = newStates.stream().filter(lb -> lb.getLayer() == nextLayer && Objects.equals(lb.getOrigin(), entry.getValue())).findFirst().orElse(null);
+                                TagedBuchiState<S> resultState;
+                                if (fs.get(state.getNumber()).contains(state.getOrigin())) {
+                                    resultState = newStates.stream().filter(lb -> lb.getNumber() == nextLayer && Objects.equals(lb.getOrigin(), entry.getValue())).findFirst().orElse(null);
                                 } else {
-                                    resultState = newStates.stream().filter(lb -> Objects.equals(lb.getLayer(), state.getLayer()) && Objects.equals(lb.getOrigin(), entry.getValue())).findFirst().orElse(null);
+                                    resultState = newStates.stream().filter(lb -> Objects.equals(lb.getNumber(), state.getNumber()) && Objects.equals(lb.getOrigin(), entry.getValue())).findFirst().orElse(null);
                                 }
 
                                 return new AbstractMap.SimpleEntry<>(
@@ -126,9 +127,110 @@ public class BuchiAutomate<S, T> {
         ));
 
         BuchiAutomate<S, T> result = new BuchiAutomate<>();
-        result.setInitState(newStates.stream().filter(s -> s.getLayer() == 0 && Objects.equals(s.getOrigin(), buchiAutomate.getInitState())).findFirst().orElse(null));
+        result.setInitState(newStates.stream().filter(s -> s.getNumber() == 0 && Objects.equals(s.getOrigin(), buchiAutomate.getInitState())).findFirst().orElse(null));
         result.setTransitions(transitions);
         result.setAcceptingFamily(ImmutableSet.of(newStates.stream().filter(s -> fs.get(0).contains(s)).collect(Collectors.toSet())));
         return result;
+    }
+
+    private enum Color {
+        WHITE,
+        GREY,
+        BLACK
+    }
+
+    public static <T, E> List<BuchiState<E>> findReachableCycle(BuchiAutomate<E, T> buchiAutomate) {
+        final Set<BuchiState<E>> accepting = buchiAutomate.getAcceptingFamily().stream().findFirst().orElse(null);
+
+        Deque<BuchiState<E>> nodesStack = new ArrayDeque<>();
+        Map<BuchiState<E>, Color> colors = buchiAutomate.nodes().stream().collect(Collectors.toMap(
+                Function.identity(),
+                k -> Color.WHITE
+        ));
+        Map<BuchiState<E>, Color> colors2 = new HashMap<>(colors);
+
+        try {
+            dfsOuter(buchiAutomate, accepting, colors, colors2, buchiAutomate.getInitState(), nodesStack);
+        } catch (Exception e) {
+            return new ArrayList<>(nodesStack);
+        }
+
+        return null;
+    }
+
+    private static <U, E> void dfsInner(BuchiAutomate<E, U> automate, Set<BuchiState<E>> accepting, Map<BuchiState<E>, Color> colors, BuchiState<E> from, Deque<BuchiState<E>> nodesStack) {
+        if (colors.get(from) == Color.BLACK || colors.get(from) == Color.GREY) {
+            return;
+        }
+
+        dfsInner(colors, from, () -> {
+            for (Map.Entry<U, BuchiState<E>> entry: automate.getTransitions().get(from).entries()) {
+                if (accepting.contains(entry.getValue()) && colors.get(entry.getValue()) == Color.GREY) {
+                    nodesStack.add(entry.getValue());
+                    throw new RuntimeException("");
+                } else {
+                    dfsInner(automate, accepting, colors, entry.getValue(), nodesStack);
+                }
+            }
+        }, nodesStack);
+    }
+
+    private static <U, E> void dfsOuter(BuchiAutomate<E, U> automate, Set<BuchiState<E>> accepting, Map<BuchiState<E>, Color> colors, Map<BuchiState<E>, Color> colors2, BuchiState<E> from, Deque<BuchiState<E>> nodesStack) {
+        if (colors.get(from) == Color.BLACK || colors.get(from) == Color.GREY) {
+            return;
+        }
+
+        dfsInner(colors, from, () -> {
+            for (Map.Entry<U, BuchiState<E>> entry: automate.getTransitions().get(from).entries()) {
+                if (accepting.contains(from)) {
+                    final Map<BuchiState<E>, Color> colorsB = new HashMap<>(colors);
+                    colors.clear();
+                    colors.putAll(colors2);
+                    dfsInner(automate, accepting, colors, entry.getValue(), nodesStack);
+                    colors.putAll(colorsB);
+                }
+                if (accepting.contains(entry.getValue()) && colors.get(entry.getValue()) == Color.GREY) {
+                    nodesStack.add(entry.getValue());
+                    throw new RuntimeException("");
+                } else {
+                    dfsInner(automate, accepting, colors, entry.getValue(), nodesStack);
+                }
+            }
+        }, nodesStack);
+    }
+
+    private static <E> void dfsInner(Map<BuchiState<E>, Color> colors, BuchiState<E> item, Runnable body, Deque<BuchiState<E>> nodesStack) {
+        nodesStack.add(item);
+        colors.put(item, Color.GREY);
+        body.run();
+        colors.put(item, Color.BLACK);
+        assert Objects.equals(nodesStack.pop(), item);
+    }
+
+    public static BuchiAutomate<Integer, Set<Prop>> of(Formula ltlFormula) {
+        // TODO: implement
+
+        return null;
+    }
+
+    private static void expand(Integer nextTag,
+                               Set<LtlBuchiState> nodes,
+                               Set<Formula> newFormulas,
+                               Set<Formula> oldFormulas,
+                               Set<Formula> next,
+                               Set<LtlBuchiState> incoming) {
+        if (newFormulas.isEmpty()) {
+            LtlBuchiState q = nodes.stream().filter(s -> Objects.equals(s.getNext(), next) && Objects.equals(s.getNow(), oldFormulas)).findFirst().orElse(null);
+            if (Objects.nonNull(q)) {
+                q.getIncoming().addAll(incoming);
+            } else {
+                LtlBuchiState n = new LtlBuchiState(nextTag++, incoming, oldFormulas, next);
+                nodes.add(n);
+                expand(nextTag, nodes, next, Collections.emptySet(), Collections.emptySet(), Collections.singleton(n));
+            }
+        } else {
+            Formula f = newFormulas.stream().findFirst().orElse(null);
+
+        }
     }
 }
