@@ -20,9 +20,9 @@ import java.util.stream.Collectors;
 @AllArgsConstructor(staticName = "of")
 @Setter
 public class ModelKripke {
-    private Set<StateKripke> stateKripkes;
-    private StateKripke initStateKripke;
-    private Map<StateKripke, Set<StateKripke>> transitions;
+    public Set<StateKripke> states;
+    public StateKripke initStateKripke;
+    public Map<StateKripke, Set<StateKripke>> transitions;
 
     public static ModelKripke fromDiagramAutomate(final DiagramAutomate automate) {
         // TODO: need to be refactored

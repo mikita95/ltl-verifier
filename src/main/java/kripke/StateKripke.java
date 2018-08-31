@@ -11,5 +11,5 @@ import java.util.Set;
 @AllArgsConstructor(staticName = "of")
 @Setter
 public class StateKripke {
-    private Set<Variable> variables;
+    public Set<Variable> variables;
 }
