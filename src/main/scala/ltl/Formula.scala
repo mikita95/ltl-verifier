@@ -1,6 +1,5 @@
 package ltl
-
-import scala.collection.mutable
+import scala.collection.JavaConverters._
 
 trait Formula {
 
@@ -22,7 +21,9 @@ trait Formula {
     }
   }
 
-  def variables() :Set[Prop] = Set()
+  def variables(): Set[Prop] = Set()
+  def varsJava(): java.util.Set[Prop] = variables().asJava
+
   def getBody: Formula = this match {
     case p: Not => p.body
     case p: Future => p.body
@@ -100,38 +101,8 @@ object tmp {
     case _ => new Not(formula)
   }
 
-    def allSubsets[T](set: Set[T]): List[Set[T]] = Nil
+  def allSubsets[T](set: Set[T]): List[Set[T]] = Nil
 
-    def negationNormalForm(formula: Formula): Formula = formula match {
-      case p: Not =>
-        val f = p.body
-        f match {
-          case a: Prop => p
-          case a: TRUE => new FALSE
-          case a: FALSE => new TRUE
-          case a: Not => negationNormalForm(a.body)
-          case a: And => new Or(negationNormalForm(new Not(a.left)), negationNormalForm(new Not(a.right)))
-          case a: Or => new And(negationNormalForm(new Not(a.left)), negationNormalForm(new Not(a.right)))
-          case a: Until => new Release(negationNormalForm(new Not(a.left)), negationNormalForm(new Not(a.right)))
-          case a: Release => new Until(negationNormalForm(new Not(a.left)), negationNormalForm(new Not(a.right)))
-          case a: Next => new Next(negationNormalForm(new Not(a.body)))
-          case a: Impl => negationNormalForm(new Not(negationNormalForm(a)))
-          case a: Future => negationNormalForm(new Not(negationNormalForm(a)))
-          case a: Global => negationNormalForm(new Not(negationNormalForm(a)))
-        }
-      case p: Future => new Until(new TRUE, negationNormalForm(p.body))
-      case p: Global => new Release(new FALSE, negationNormalForm(p.body))
-      case p: Impl => new Or(negationNormalForm(new Not(p.left)), negationNormalForm(p.right))
-      case p: Prop => p
-      case p: And => new And(negationNormalForm(p.left), negationNormalForm(p.right))
-      case p: Or => new Or(negationNormalForm(p.left), negationNormalForm(p.right))
-      case p: Until => new Until(negationNormalForm(p.left), negationNormalForm(p.right))
-      case p: Release => new Release(negationNormalForm(p.left), negationNormalForm(p.right))
-      case p: Next => new Next(negationNormalForm(p.body))
-      case p: TRUE => p
-      case p: FALSE => p
-    }
-  }
   def negationNormalForm(formula: Formula): Formula = formula match {
     case p: Not =>
       val f = p.body

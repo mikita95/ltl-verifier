@@ -38,21 +38,20 @@ public class BuchiAutomate<S, T> {
     }
 
     public static BuchiAutomate<StateKripke, Set<Variable>> of(final ModelKripke modelKripke) {
-        Map<StateKripke, BuchiState<StateKripke>> buchiStateByKripkeState = modelKripke.getStateKripkes().stream()
+        Map<StateKripke, BuchiState<StateKripke>> buchiStateByKripkeState = modelKripke.getStates().stream()
                 .collect(Collectors.toMap(Function.identity(), BuchiState::new));
 
 
-        Map<BuchiState, Multimap> transitions = modelKripke.getStateKripkes().stream().collect(Collectors.toMap(
+        Map<BuchiState<StateKripke>, Multimap<Set<Variable>, BuchiState<StateKripke>>> transitions = modelKripke.getStates().stream().collect(Collectors.toMap(
                 buchiStateByKripkeState::get,
                 k -> makeTransition(modelKripke.getTransitions().get(k), buchiStateByKripkeState)
         ));
 
-
-        return BuchiAutomate.of(
-                buchiStateByKripkeState.getOrDefault(modelKripke.getInitStateKripke(), null),
-                transitions,
-                ImmutableSet.of(ImmutableSet.copyOf(buchiStateByKripkeState.values()))
-        );
+        BuchiAutomate<StateKripke, Set<Variable>> result = new BuchiAutomate<>();
+        result.transitions = transitions;
+        result.initState = buchiStateByKripkeState.getOrDefault(modelKripke.getInitStateKripke(), null);
+        result.acceptingFamily = ImmutableSet.of(ImmutableSet.copyOf(buchiStateByKripkeState.values()));
+        return result;
     }
 
     private static Multimap<Set<Variable>, BuchiState<StateKripke>> makeTransition(final Set<StateKripke> states, final Map<StateKripke, BuchiState<StateKripke>> buchiStateByKripkeState) {
@@ -308,11 +307,11 @@ public class BuchiAutomate<S, T> {
 
     public static <A, B> BuchiAutomate<Pair<BuchiState<A>, BuchiState<B>>, Set<Prop>> cross(BuchiAutomate<A, Set<Prop>> aa, BuchiAutomate<B, Set<Prop>> xx, Set<Prop> props) {
         val nodes = aa.nodes().stream().flatMap(a -> xx.nodes().stream().map(x -> new BuchiState<>(Pair.of(a, x)))).collect(Collectors.toSet());
-        Map<BuchiState, Multimap> transitions = new HashMap<>();
+        Map<BuchiState<Pair<BuchiState<A>, BuchiState<B>>>, Multimap<Set<Prop>, BuchiState<Pair<BuchiState<A>, BuchiState<B>>>>> transitions = new HashMap<>();
 
         for (val ax: nodes) {
             Pair<BuchiState<A>, BuchiState<B>> pair = ax.getTag();
-            val to = nodes.stream().flatMap(
+            Set<Pair<Set<Prop>, BuchiState<Pair<BuchiState<A>, BuchiState<B>>>>> to = nodes.stream().flatMap(
                     by -> {
                         Pair<BuchiState<A>, BuchiState<B>> t = by.getTag();
                         val abL = aa.getTransitions().get(pair.getKey()).entries().stream().filter(e -> e.getValue().equals(t.getKey())).map(Map.Entry::getKey).collect(Collectors.toSet());
@@ -321,8 +320,8 @@ public class BuchiAutomate<S, T> {
                     }
             ).collect(Collectors.toSet());
 
-            ImmutableMultimap.Builder<Set<Prop>, BuchiState> builder = new ImmutableListMultimap.Builder<>();
-            to.forEach(p -> builder.put(p.getKey(), p.getValue()));
+            ImmutableMultimap.Builder<Set<Prop>, BuchiState<Pair<BuchiState<A>, BuchiState<B>>>> builder = new ImmutableListMultimap.Builder<>();
+            to.forEach(p -> builder.put(p.getLeft(), p.getRight()));
             transitions.put(ax, builder.build());
         }
 
@@ -336,7 +335,11 @@ public class BuchiAutomate<S, T> {
                 f -> nodes.stream().filter(n -> f.contains(n.getTag().getRight())).collect(Collectors.toSet())
         ).collect(Collectors.toSet());
 
-        return BuchiAutomate.of(init, transitions, null);
+        BuchiAutomate<Pair<BuchiState<A>, BuchiState<B>>, Set<Prop>> result = new BuchiAutomate<>();
+        result.initState = init;
+        result.transitions = transitions;
+
+        return result;
     }
 
     private static <A> Set<A> minus(Set<A> x, Set<A> y) {

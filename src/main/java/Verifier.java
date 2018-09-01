@@ -1,17 +1,22 @@
 import automate.DiagramAutomate;
 import automate.Variable;
 import buchi.BuchiAutomate;
+import buchi.BuchiState;
 import diagram.Diagram;
 import diagram.Parser;
 import kripke.ModelKripke;
 import kripke.StateKripke;
+import lombok.val;
 import ltl.Formula;
 import ltl.ParserRunner;
 import ltl.Prop;
 import org.apache.commons.cli.*;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.IOException;
 import java.nio.file.Paths;
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -59,38 +64,23 @@ public class Verifier {
 
         } else {
             final Formula formula = ParserRunner.parseFormula(ltlFormula);
+            final Optional<List<BuchiState<Pair<BuchiState<StateKripke>, BuchiState<Integer>>>>> result = runVerification(d, formula);
+            final Result printableResult = result.map(Result::fail).orElseGet(Result::correct);
+            System.out.println(printableResult.print());
         }
-     /*   if (ltlFormulaString != null) {
-            val formula = parseLtlFormula(ltlFormulaString!!)
-            val result = runVerification(diagram, formula)
-            showResult(formula, result)
-        } else if (ltlFormulaeFile != null) {
-            ltlFormulaeFile!!.readLines().map { parseLtlFormula(it) }.forEach { formula ->
-                    val result = runVerification(diagram, formula)
-                showResult(formula, result)
-            }
-        } else {
-            print("Enter formula:")
-            val formula = parseLtlFormula(readLine()!!)
-            val result = runVerification(diagram, formula)
-            showResult(formula, result)
-        }*/
      }
 
-    private static void runVerification(Diagram diagram, Formula formula) {
+    private static Optional<List<BuchiState<Pair<BuchiState<StateKripke>, BuchiState<Integer>>>>>
+    runVerification(Diagram diagram, Formula formula) {
         DiagramAutomate diagramAutomate = DiagramAutomate.fromDiagram(diagram);
         ModelKripke modelKripke = ModelKripke.fromDiagramAutomate(diagramAutomate);
         BuchiAutomate<StateKripke, Set<Variable>> buchi = BuchiAutomate.of(modelKripke);
         BuchiAutomate<StateKripke, Set<Prop>> buchiProp = BuchiAutomate.variableAutomatonToPropAutomaton(buchi);
-     /*   val automaton = automatonFromDiagram(diagram)
-        val kripke = kripkeModelFromAutomaton(automaton)
-        val buchi = buchiAutomatonFromKripkeModel(kripke)
-        val buchiProp = variableAutomatonToPropAutomaton(buchi)
-
-        return runVerificationOnAutomaton(buchiProp, formula)*/
+        return runVerificationOnAutomaton(buchiProp, formula);
     }
 
-    private static void runVerificationOnAutomaton(BuchiAutomate<StateKripke, Set<Prop>> buchiProp, Formula formula) {
+    private static Optional<List<BuchiState<Pair<BuchiState<StateKripke>, BuchiState<Integer>>>>>
+    runVerificationOnAutomaton(BuchiAutomate<StateKripke, Set<Prop>> buchiProp, Formula formula) {
         Formula negation = formula.negation();
         Formula nnf = negation.negationNormalForm();
 
@@ -100,35 +90,10 @@ public class Verifier {
         Set<Prop> props = buchiProp.getTransitions().entrySet().stream().flatMap(
                 x -> x.getValue().entries().stream().flatMap(y -> y.getKey().stream())
         ).collect(Collectors.toSet());
-        props.removeAll(nnf.)
-        BuchiAutomate.cross(buchiProp, buchiForLtl, props);
+        props.removeAll(nnf.varsJava());
+        val cross = BuchiAutomate.cross(buchiProp, buchiForLtl, props);
+        val cycle = BuchiAutomate.findReachableCycle(cross);
 
-
+        return Optional.ofNullable(cycle);
     }
-
-   /* un runVerificationOnAutomaton(
-            automaton: BuchiAutomaton<*, Set<Prop>>,
-            formula: Formula
-    ): VerificationResult {
-        val negation = Not(formula)
-        val nnf = negationNormalForm(negation)
-
-        return verifyNnf(automaton, nnf)
-    }
-
-    fun verifyNnf(
-            automaton: BuchiAutomaton<*, Set<Prop>>,
-            nnf: Formula
-    ): VerificationResult {
-
-        val props = automaton.transitions.flatMap { it.value.flatMap { it.first } }.toSet()
-
-        val generalizedBuchiForLtl = buchiAutomatonFromLtl(nnf)
-        val buchiForLtl = degeneralize(generalizedBuchiForLtl)
-
-        val crossAutomaton = crossIgnoringProps(automaton, buchiForLtl, props - nnf.variables())
-        val cycle = findReachableCycle(crossAutomaton)
-
-        return if (cycle != null) CounterExample(cycle) else Correct
-    }*/
 }
