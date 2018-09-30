@@ -21,6 +21,8 @@ trait Formula {
     }
   }
 
+  def subformulasJava(): java.util.Set[Formula] = subformulas.asJava
+
   def variables(): Set[Prop] = Set()
   def varsJava(): java.util.Set[Prop] = variables().asJava
 

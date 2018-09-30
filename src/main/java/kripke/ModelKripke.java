@@ -42,6 +42,8 @@ public class ModelKripke {
         boolean changed = false;
 
         do {
+            changed = false;
+            Set<StateKripke> tempSet = new HashSet<>();
             for (StateKripke b : resultStates) {
                 Set<Variable> variables = b.getVariables();
                 if (Objects.isNull(variables)) {
@@ -79,8 +81,8 @@ public class ModelKripke {
                     for (Set<Variable> innerWorld : innerWorlds) {
                         final StateKripke innerState = StateKripke.of(innerWorld);
 
-                        if (resultStates.stream().noneMatch(stateKripke -> stateKripke.getVariables().equals(innerWorld))) {
-                            resultStates.add(innerState);
+                        if (new HashSet<>(resultStates).stream().noneMatch(stateKripke -> stateKripke.getVariables().equals(innerWorld))) {
+                            tempSet.add(innerState);
                             changed = true;
                         }
 
@@ -93,8 +95,8 @@ public class ModelKripke {
                     final Set<Variable> toWorld = ImmutableSet.of(Variable.of(stateEvent.getState().getName()));
                     final StateKripke toState = StateKripke.of(toWorld);
 
-                    if (resultStates.stream().noneMatch(stateKripke -> stateKripke.getVariables().equals(toWorld))) {
-                        resultStates.add(toState);
+                    if (new HashSet<>(resultStates).stream().noneMatch(stateKripke -> stateKripke.getVariables().equals(toWorld))) {
+                        tempSet.add(toState);
                         changed = true;
                     }
 
@@ -104,6 +106,7 @@ public class ModelKripke {
 
 
             }
+            resultStates.addAll(tempSet);
         } while (changed);
         return ModelKripke.of(
                 resultStates,

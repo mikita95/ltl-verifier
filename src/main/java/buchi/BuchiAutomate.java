@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.Setter;
 import lombok.val;
 import ltl.*;
+import one.util.streamex.StreamEx;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.util.*;
@@ -156,6 +157,14 @@ public class BuchiAutomate<S, T> {
         return null;
     }
 
+    private static <K> List<Set<K>> allSubsets(Set<K> set) {
+        return StreamEx.of(set).foldLeft(Collections.singletonList(new HashSet<>()),
+                (p, c) -> BuchiAutomate.<Set<K>>plusL(p, p.stream().map(n -> plus(n, c)).collect(Collectors.toList())));
+    }
+
+   /* fun <T> allSubsets(set: Set<T>): List<Set<T>> =
+            set.fold(listOf(emptySet<T>())) { prevSets, item -> prevSets + prevSets.map { it + item } }*/
+
     private static <U, E> void dfsInner(BuchiAutomate<E, U> automate, Set<BuchiState<E>> accepting, Map<BuchiState<E>, Color> colors, BuchiState<E> from, Deque<BuchiState<E>> nodesStack) {
         if (colors.get(from) == Color.BLACK || colors.get(from) == Color.GREY) {
             return;
@@ -206,9 +215,71 @@ public class BuchiAutomate<S, T> {
     }
 
     public static BuchiAutomate<Integer, Set<Prop>> of(Formula ltlFormula) {
-        // TODO: implement
+        Set<LtlBuchiState> nodes = new HashSet<>();
 
-        return null;
+        int nextTag = 1;
+        LtlBuchiState init = new LtlBuchiState(0, Collections.emptySet(), Collections.emptySet(), Collections.emptySet());
+        expand(nextTag, nodes, ImmutableSet.of(ltlFormula), Collections.emptySet(), Collections.emptySet(), ImmutableSet.of(init));
+        Set<Prop> allVariables = ltlFormula.varsJava();
+        Map<LtlBuchiState, Set<Prop>> apInNow = nodes.stream()
+                .collect(Collectors.toMap(
+                        Function.identity(),
+                        n -> n.getNow().stream()
+                                .filter(t -> t instanceof Prop)
+                                .map(t -> (Prop) t)
+                                .collect(Collectors.toSet())));
+        Map<LtlBuchiState, Set<Prop>> notNegatedInNow = nodes.stream().collect(Collectors.toMap(
+           Function.identity(),
+           n -> minus(
+                   allVariables,
+                   n.getNow().stream()
+                           .filter(t -> t instanceof Prop)
+                           .map(t -> (Prop) t)
+                           .collect(Collectors.toSet())
+                   )
+        ));
+
+        Map<LtlBuchiState, List<Set<Prop>>> l = nodes.stream().collect(Collectors.toMap(
+                Function.identity(),
+                n -> {
+                    Set<Prop> boundsDiff = minus(notNegatedInNow.get(n), apInNow.get(n));
+                    return allSubsets(boundsDiff).stream().map(d -> plus(d, apInNow.get(n))).collect(Collectors.toList());
+                }
+        ));
+
+        Map<LtlBuchiState, Set<LtlBuchiState>> transitions = plus(nodes, init).stream().collect(Collectors.toMap(
+                Function.identity(),
+                n -> nodes.stream().filter(t -> t.getIncoming().contains(n)).collect(Collectors.toSet())
+        ));
+
+        Set<Set<BuchiState<Integer>>> acceptingFamily = ltlFormula.subformulasJava().stream()
+                .filter(t -> t instanceof Until)
+                .map(Until.class::cast)
+                .map(u -> nodes.stream()
+                        .filter(n -> !n.getNow().contains(u) || n.getNow().contains(u.right()))
+                        .map(r -> new BuchiState<>(r.getTag()))
+                        .collect(Collectors.toSet())).collect(Collectors.toSet());
+        Map<BuchiState<Integer>, Multimap<Set<Prop>, BuchiState<Integer>>> bTrans = transitions.entrySet().stream().collect(Collectors.toMap(e -> new BuchiState<>(e.getKey().getTag()), e -> {
+            Set<AbstractMap.SimpleEntry<Set<Prop>, BuchiState<Integer>>> t = e.getValue().stream().flatMap(s ->
+                    l.getOrDefault(s, Collections.emptyList())
+                            .stream()
+                            .map(b -> new AbstractMap.SimpleEntry<>(b, new BuchiState<>(s.getTag())))).collect(Collectors.toSet());
+            ImmutableMultimap.Builder<Set<Prop>, BuchiState<Integer>> builder = new ImmutableListMultimap.Builder<>();
+            t.forEach(h -> builder.put(h.getKey(), h.getValue()));
+            return builder.build();
+        }));
+
+        BuchiAutomate<Integer, Set<Prop>> result = new BuchiAutomate<>();
+        BuchiState<Integer> initTemp = new BuchiState<>(init.getTag());
+        result.setInitState(initTemp);
+        result.setTransitions(bTrans);
+        Set<Set<BuchiState<Integer>>> temp = new HashSet<>();
+        temp.add(nodes.stream().map(s -> new BuchiState<>(s.getTag())).collect(Collectors.toSet()));
+        result.setAcceptingFamily(
+                acceptingFamily.isEmpty() ? temp : acceptingFamily
+        );
+
+        return result;
     }
 
     private static <X> Set<X> add(Set<X> set, X element) {
@@ -343,8 +414,38 @@ public class BuchiAutomate<S, T> {
     }
 
     private static <A> Set<A> minus(Set<A> x, Set<A> y) {
+        if (x == null || y == null) {
+            return new HashSet<>();
+        }
         Set<A> result = new HashSet<>(x);
         result.removeAll(y);
+        return result;
+    }
+
+    private static <A> Set<A> plus(Set<A> x, Set<A> y) {
+        if (x == null || y == null) {
+            return new HashSet<>();
+        }
+        Set<A> result = new HashSet<>(x);
+        result.addAll(y);
+        return result;
+    }
+
+    private static <A> Set<A> plus(Set<A> x, A y) {
+        if (x == null || y == null) {
+            return new HashSet<>();
+        }
+        Set<A> result = new HashSet<>(x);
+        result.add(y);
+        return result;
+    }
+
+    private static <A> List<A> plusL(List<A> x, List<A> y) {
+        if (x == null || y == null) {
+            return new ArrayList<>();
+        }
+        List<A> result = new ArrayList<>(x);
+        result.addAll(y);
         return result;
     }
 }
