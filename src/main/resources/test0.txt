@@ -1,8 +1,0 @@
-F c
-G ((a & go) -> (X b))
-F start
-F a
-F b
-G (a -> (F b))
-a
-G (F c)

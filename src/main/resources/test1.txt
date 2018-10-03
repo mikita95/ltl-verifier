@@ -1,0 +1,10 @@
+F hal_init
+G ! F(PRESTART)
+G (PRESTART -> (PRESTART U POWER_ON))
+G ((POWER_ON & CHG) -> (FLASH U POWER_ON))
+G (hal_init -> (F tim4_enable))
+G (F PRESTART)
+G (SLEEP -> (F POWER_ON))
+G (hal_init -> (X tim4_enable))
+G (pin_reset_s1 -> (X pin_reset_s2))
+G (pin_reset_s2 -> (X pin_reset_s3))
