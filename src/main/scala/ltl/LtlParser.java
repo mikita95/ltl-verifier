@@ -1,12 +1,16 @@
 package ltl;// Generated from C:/Users/yegres/IdeaProjects/ltl-verifier/src/main/antlr4\Ltl.g4 by ANTLR 4.7
-import org.antlr.v4.runtime.atn.*;
-import org.antlr.v4.runtime.dfa.DFA;
+
 import org.antlr.v4.runtime.*;
-import org.antlr.v4.runtime.misc.*;
-import org.antlr.v4.runtime.tree.*;
+import org.antlr.v4.runtime.atn.ATN;
+import org.antlr.v4.runtime.atn.ATNDeserializer;
+import org.antlr.v4.runtime.atn.ParserATNSimulator;
+import org.antlr.v4.runtime.atn.PredictionContextCache;
+import org.antlr.v4.runtime.dfa.DFA;
+import org.antlr.v4.runtime.tree.ParseTreeListener;
+import org.antlr.v4.runtime.tree.ParseTreeVisitor;
+import org.antlr.v4.runtime.tree.TerminalNode;
+
 import java.util.List;
-import java.util.Iterator;
-import java.util.ArrayList;
 
 @SuppressWarnings({"all", "warnings", "unchecked", "unused", "cast"})
 public class LtlParser extends Parser {
@@ -17,7 +21,7 @@ public class LtlParser extends Parser {
 		new PredictionContextCache();
 	public static final int
 		T__0=1, T__1=2, T__2=3, T__3=4, T__4=5, T__5=6, T__6=7, T__7=8, T__8=9, 
-		T__9=10, T__10=11, BooleanLiteral=12, NUM=13, ID=14, WS=15;
+		T__9=10, T__10=11, BooleanLiteral=12, ID=13, WS=14;
 	public static final int
 		RULE_formula = 0;
 	public static final String[] ruleNames = {
@@ -25,12 +29,12 @@ public class LtlParser extends Parser {
 	};
 
 	private static final String[] _LITERAL_NAMES = {
-		null, "'('", "')'", "'!'", "'X'", "'F'", "'G'", "'U'", "'R'", "'&&'", 
-		"'||'", "'->'"
+		null, "'('", "')'", "'!'", "'X'", "'F'", "'G'", "'U'", "'R'", "'&'",
+		"'|'", "'->'"
 	};
 	private static final String[] _SYMBOLIC_NAMES = {
 		null, null, null, null, null, null, null, null, null, null, null, null, 
-		"BooleanLiteral", "NUM", "ID", "WS"
+		"BooleanLiteral", "ID", "WS"
 	};
 	public static final Vocabulary VOCABULARY = new VocabularyImpl(_LITERAL_NAMES, _SYMBOLIC_NAMES);
 

@@ -1,12 +1,11 @@
 package ltl;// Generated from C:/Users/yegres/IdeaProjects/ltl-verifier/src/main/antlr4\Ltl.g4 by ANTLR 4.7
-import org.antlr.v4.runtime.Lexer;
-import org.antlr.v4.runtime.CharStream;
-import org.antlr.v4.runtime.Token;
-import org.antlr.v4.runtime.TokenStream;
+
 import org.antlr.v4.runtime.*;
-import org.antlr.v4.runtime.atn.*;
+import org.antlr.v4.runtime.atn.ATN;
+import org.antlr.v4.runtime.atn.ATNDeserializer;
+import org.antlr.v4.runtime.atn.LexerATNSimulator;
+import org.antlr.v4.runtime.atn.PredictionContextCache;
 import org.antlr.v4.runtime.dfa.DFA;
-import org.antlr.v4.runtime.misc.*;
 
 @SuppressWarnings({"all", "warnings", "unchecked", "unused", "cast"})
 public class LtlLexer extends Lexer {
@@ -17,7 +16,7 @@ public class LtlLexer extends Lexer {
 		new PredictionContextCache();
 	public static final int
 		T__0=1, T__1=2, T__2=3, T__3=4, T__4=5, T__5=6, T__6=7, T__7=8, T__8=9, 
-		T__9=10, T__10=11, BooleanLiteral=12, NUM=13, ID=14, WS=15;
+		T__9=10, T__10=11, BooleanLiteral=12, ID=13, WS=14;
 	public static String[] channelNames = {
 		"DEFAULT_TOKEN_CHANNEL", "HIDDEN"
 	};
@@ -28,16 +27,16 @@ public class LtlLexer extends Lexer {
 
 	public static final String[] ruleNames = {
 		"T__0", "T__1", "T__2", "T__3", "T__4", "T__5", "T__6", "T__7", "T__8", 
-		"T__9", "T__10", "BooleanLiteral", "NUM", "ID", "WS"
+		"T__9", "T__10", "BooleanLiteral", "ID", "WS"
 	};
 
 	private static final String[] _LITERAL_NAMES = {
-		null, "'('", "')'", "'!'", "'X'", "'F'", "'G'", "'U'", "'R'", "'&&'", 
-		"'||'", "'->'"
+		null, "'('", "')'", "'!'", "'X'", "'F'", "'G'", "'U'", "'R'", "'&'",
+		"'|'", "'->'"
 	};
 	private static final String[] _SYMBOLIC_NAMES = {
 		null, null, null, null, null, null, null, null, null, null, null, null, 
-		"BooleanLiteral", "NUM", "ID", "WS"
+		"BooleanLiteral", "ID", "WS"
 	};
 	public static final Vocabulary VOCABULARY = new VocabularyImpl(_LITERAL_NAMES, _SYMBOLIC_NAMES);
 

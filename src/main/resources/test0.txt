@@ -1,5 +1,5 @@
 F c
-G ((a && go) -> (X b))
+G ((a & go) -> (X b))
 F start
 F a
 F b
