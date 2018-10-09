@@ -3,6 +3,7 @@
 ## Usage
 ### Packaging
 `mvn package`
+
 It produces jar file: /target/verifier-1.0-SNAPSHOT-jar-with-dependencies.jar
 
 ### Jar
