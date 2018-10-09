@@ -39,6 +39,6 @@ public class Result {
         Collections.reverse(prefix);
         final String path = prefix.stream().map(s -> s.getTag().getLeft().toString()).collect(Collectors.joining("\n"));
         final String answer = cycle.stream().map(s -> s.getTag().getLeft().toString()).collect(Collectors.joining("\n"));
-        return "it is not correct\npath:\n" + path + "\n cycle:\n" + answer;
+        return "it is not correct\npath:\n" + path + "\ncycle:\n" + answer;
     }
 }

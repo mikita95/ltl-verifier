@@ -4,7 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.lang.Nullable;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -19,7 +18,7 @@ public class Assignment {
     private Variable variable;
     private Integer value;
 
-    public static List<Assignment> makeAssignments(@Nullable final String code, final Set<Variable> variableSet) {
+    public static List<Assignment> makeAssignments(final String code, final Set<Variable> variableSet) {
         if (StringUtils.isEmpty(code))
             return Collections.emptyList();
         return Arrays.stream(code.split("\\r?\\n"))

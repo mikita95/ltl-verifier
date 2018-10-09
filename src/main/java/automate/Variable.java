@@ -6,7 +6,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.lang.Nullable;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -22,7 +21,7 @@ public class Variable {
         return Variable.of(name, false);
     }
 
-    public static AbstractMap.SimpleEntry<Variable, Integer> parseDeclaration(@Nullable final String declaration) {
+    public static AbstractMap.SimpleEntry<Variable, Integer> parseDeclaration(final String declaration) {
         final String[] decl = StringUtils.removeEnd(declaration
                         .replaceFirst("volatile ", "")
                         .replaceFirst("bool ", ""),

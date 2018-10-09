@@ -3,14 +3,12 @@ package diagram;
 import com.fasterxml.jackson.dataformat.xml.JacksonXmlModule;
 import com.fasterxml.jackson.dataformat.xml.XmlMapper;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-@Component
 public class Parser {
     public Diagram parse(final Path xml) throws IOException {
         final JacksonXmlModule xmlModule = new JacksonXmlModule();
