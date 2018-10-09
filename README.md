@@ -3,6 +3,7 @@
 ## Usage
 ### Packaging
 `mvn package`
+It produces jar file: /target/verifier-1.0-SNAPSHOT-jar-with-dependencies.jar
 
 ### Jar
 Download: [verifier.jar](https://github.com/mikita95/ltl-verifier/releases/download/1.1/verifier.jar)
