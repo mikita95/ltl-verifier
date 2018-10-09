@@ -18,6 +18,9 @@ Download: [verifier.jar](https://github.com/mikita95/ltl-verifier/releases/downl
 -x,--xml <arg>       xml file path
 ```
 
+### LTL-formulas grammar
+Grammar for LTL-formulas is located at [ANTLR file](https://github.com/mikita95/ltl-verifier/blob/master/src/main/antlr4/Ltl.g4)
+
 ## Output example
 ```java -jar verifier.jar --xml=src/main/resources/diagram1.xml --file=src/main/resources/test1.txt```
 ```
