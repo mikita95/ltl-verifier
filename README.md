@@ -5,7 +5,7 @@
 `mvn package`
 
 ### Jar
-Download: [verifier.jar](https://github.com/mikita95/ltl-verifier/releases/download/1.0/verifier.jar)
+Download: [verifier.jar](https://github.com/mikita95/ltl-verifier/releases/download/1.1/verifier.jar)
 
 ### Using jar
 `java -jar verifier.jar`
