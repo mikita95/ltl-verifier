@@ -91,15 +91,15 @@ public class Verifier {
         Formula nnf = negation.negationNormalForm();
 
         BuchiAutomate<Integer, Set<Prop>> generalizedBuchiForLtl = BuchiAutomate.of(nnf);
-        BuchiAutomate<Integer, Set<Prop>> buchiForLtl = BuchiAutomate.degeneralize(generalizedBuchiForLtl);
+        BuchiAutomate<Integer, Set<Prop>> buchiForLtl = BuchiAutomate.simplify(generalizedBuchiForLtl);
 
         Set<Prop> props = buchiProp.getTransitions().entrySet().stream().flatMap(
                 x -> x.getValue().entries().stream().flatMap(y -> y.getKey().stream())
         ).collect(Collectors.toCollection(LinkedHashSet::new));
         props.removeAll(nnf.varsJava());
-        BuchiAutomate<Pair<BuchiState<StateKripke>, BuchiState<Integer>>, Set<Prop>> cross = BuchiAutomate.cross(buchiProp, buchiForLtl, props);
+        BuchiAutomate<Pair<BuchiState<StateKripke>, BuchiState<Integer>>, Set<Prop>> cross = BuchiAutomate.intersect(buchiProp, buchiForLtl, props);
         List<BuchiState<Pair<BuchiState<StateKripke>, BuchiState<Integer>>>> cycle =
-                new BuchiAutomateCycleFinder<Pair<BuchiState<StateKripke>, BuchiState<Integer>>>().findReachableCycle(cross);
+                new BuchiAutomateCycleFinder<Pair<BuchiState<StateKripke>, BuchiState<Integer>>>().cycle(cross);
 
         return Optional.ofNullable(cycle);
     }

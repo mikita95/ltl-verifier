@@ -6,10 +6,10 @@ import java.util.stream.Collectors;
 
 public class BuchiAutomateCycleFinder<E> {
     private Deque<BuchiState<E>> nodesStack;
-    private Map<BuchiState<E>, Color> colors;
-    private Map<BuchiState<E>, Color> colors2;
+    private Map<BuchiState<E>, Mark> marks;
+    private Map<BuchiState<E>, Mark> nodesMarks;
 
-    private enum Color {
+    private enum Mark {
         WHITE,
         GREY,
         BLACK
@@ -19,18 +19,18 @@ public class BuchiAutomateCycleFinder<E> {
 
     }
 
-    public <T> List<BuchiState<E>> findReachableCycle(BuchiAutomate<E, T> buchiAutomate) {
+    public <T> List<BuchiState<E>> cycle(BuchiAutomate<E, T> buchiAutomate) {
         final Set<BuchiState<E>> accepting = buchiAutomate.getAcceptingFamily().stream().findFirst().orElse(null);
 
         nodesStack = new ArrayDeque<>();
-        colors = buchiAutomate.nodes().stream().collect(Collectors.toMap(
+        marks = buchiAutomate.nodes().stream().collect(Collectors.toMap(
                 Function.identity(),
-                k -> Color.WHITE
+                k -> Mark.WHITE
         ));
-        colors2 = new HashMap<>(colors);
+        nodesMarks = new HashMap<>(marks);
 
         try {
-            dfsOuter(buchiAutomate, accepting, buchiAutomate.getInitState());
+            findAccepted(buchiAutomate, accepting, buchiAutomate.getInitState());
         } catch (Exception e) {
             return new ArrayList<>(nodesStack);
         }
@@ -38,44 +38,43 @@ public class BuchiAutomateCycleFinder<E> {
         return null;
     }
 
-    private <U> void dfsInner(BuchiAutomate<E, U> automate, Set<BuchiState<E>> accepting, BuchiState<E> from) {
-        if (colors.get(from) == Color.BLACK || colors.get(from) == Color.GREY) {
+    private <U> void dfsCycle(BuchiAutomate<E, U> automate, Set<BuchiState<E>> accepting, BuchiState<E> from) {
+        if (marks.get(from) == Mark.BLACK || marks.get(from) == Mark.GREY) {
             return;
         }
-
         nodesStack.push(from);
-        colors.put(from, Color.GREY);
+        marks.put(from, Mark.GREY);
         for (Map.Entry<U, BuchiState<E>> entry : automate.getTransitions().get(from).entries()) {
-            if (accepting.contains(entry.getValue()) && colors.get(entry.getValue()) == Color.GREY) {
+            if (accepting.contains(entry.getValue()) && marks.get(entry.getValue()) == Mark.GREY) {
                 nodesStack.add(entry.getValue());
                 throw new RuntimeException("");
             } else {
-                dfsInner(automate, accepting, entry.getValue());
+                dfsCycle(automate, accepting, entry.getValue());
             }
         }
-        colors.put(from, Color.BLACK);
+        marks.put(from, Mark.BLACK);
         assert Objects.equals(nodesStack.pop(), from);
     }
 
-    private <U> void dfsOuter(BuchiAutomate<E, U> automate, Set<BuchiState<E>> accepting, BuchiState<E> from) {
-        if (colors.get(from) == Color.BLACK || colors.get(from) == Color.GREY) {
+    private <U> void findAccepted(BuchiAutomate<E, U> automate, Set<BuchiState<E>> accepting, BuchiState<E> from) {
+        if (marks.get(from) == Mark.BLACK || marks.get(from) == Mark.GREY) {
             return;
         }
 
         nodesStack.push(from);
-        colors.put(from, Color.GREY);
+        marks.put(from, Mark.GREY);
         for (Map.Entry<U, BuchiState<E>> entry : automate.getTransitions().get(from).entries()) {
             if (accepting.contains(from)) {
-                final Map<BuchiState<E>, Color> colorsB = new HashMap<>(colors);
-                colors.clear();
-                colors.putAll(colors2);
-                dfsInner(automate, accepting, entry.getValue());
-                colors.clear();
-                colors.putAll(colorsB);
+                final Map<BuchiState<E>, Mark> colorsB = new HashMap<>(marks);
+                marks.clear();
+                marks.putAll(nodesMarks);
+                dfsCycle(automate, accepting, entry.getValue());
+                marks.clear();
+                marks.putAll(colorsB);
             }
-            dfsOuter(automate, accepting, entry.getValue());
+            findAccepted(automate, accepting, entry.getValue());
         }
-        colors.put(from, Color.BLACK);
+        marks.put(from, Mark.BLACK);
         assert Objects.equals(nodesStack.pop(), from);
     }
 }

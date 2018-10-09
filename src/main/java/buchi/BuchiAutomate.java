@@ -92,7 +92,7 @@ public class BuchiAutomate<S, T> {
         return result;
     }
 
-    public static <S, T> BuchiAutomate<S, T> degeneralize(BuchiAutomate<S, T> buchiAutomate) {
+    public static <S, T> BuchiAutomate<S, T> simplify(BuchiAutomate<S, T> buchiAutomate) {
         if (!buchiAutomate.isMultiAccepting()) {
             return buchiAutomate;
         }
@@ -129,7 +129,7 @@ public class BuchiAutomate<S, T> {
         BuchiAutomate<S, T> result = new BuchiAutomate<>();
         result.setInitState(newStates.stream().filter(s -> s.getNumber() == 0 && Objects.equals(s.getOrigin(), buchiAutomate.getInitState())).findFirst().orElse(null));
         result.setTransitions(transitions);
-        result.setAcceptingFamily(ImmutableSet.of(newStates.stream().filter(s -> fs.get(0).contains(s)).collect(Collectors.toSet())));
+        result.setAcceptingFamily(ImmutableSet.of(newStates.stream().filter(s -> fs.get(0).contains(s)).collect(Collectors.toCollection(LinkedHashSet::new))));
         return result;
     }
 
@@ -145,7 +145,7 @@ public class BuchiAutomate<S, T> {
         nodes = new LinkedHashSet<>();
         nextTag = 1;
         LtlBuchiState init = new LtlBuchiState(0, Collections.emptySet(), Collections.emptySet(), Collections.emptySet());
-        expand(ImmutableSet.of(ltlFormula), Collections.emptySet(), Collections.emptySet(), ImmutableSet.of(init));
+        formulasToNodes(ImmutableSet.of(ltlFormula), Collections.emptySet(), Collections.emptySet(), ImmutableSet.of(init));
         Set<Prop> allVariables = ltlFormula.varsJava();
         Map<LtlBuchiState, Set<Prop>> apInNow = nodes.stream()
                 .collect(Collectors.toMap(
@@ -153,7 +153,7 @@ public class BuchiAutomate<S, T> {
                         n -> n.getNow().stream()
                                 .filter(t -> t instanceof Prop)
                                 .map(t -> (Prop) t)
-                                .collect(Collectors.toSet())));
+                                .collect(Collectors.toCollection(LinkedHashSet::new))));
         Map<LtlBuchiState, Set<Prop>> notNegatedInNow = nodes.stream().collect(Collectors.toMap(
            Function.identity(),
            n -> minus(
@@ -164,7 +164,7 @@ public class BuchiAutomate<S, T> {
                            .map(Not::body)
                            .filter(t -> t instanceof Prop)
                            .map(t -> (Prop) t)
-                           .collect(Collectors.toSet())
+                           .collect(Collectors.toCollection(LinkedHashSet::new))
                    )
         ));
 
@@ -178,7 +178,7 @@ public class BuchiAutomate<S, T> {
 
         Map<LtlBuchiState, Set<LtlBuchiState>> transitions = plus(nodes, init).stream().collect(Collectors.toMap(
                 Function.identity(),
-                n -> nodes.stream().filter(t -> t.getIncoming().contains(n)).collect(Collectors.toSet())
+                n -> nodes.stream().filter(t -> t.getIncoming().contains(n)).collect(Collectors.toCollection(LinkedHashSet::new))
         ));
 
         Set<Set<BuchiState<Integer>>> acceptingFamily = ltlFormula.subformulasJava().stream()
@@ -187,12 +187,12 @@ public class BuchiAutomate<S, T> {
                 .map(u -> nodes.stream()
                         .filter(n -> !n.getNow().contains(u) || n.getNow().contains(u.right()))
                         .map(r -> new BuchiState<>(r.getTag()))
-                        .collect(Collectors.toSet())).collect(Collectors.toSet());
+                        .collect(Collectors.toCollection(LinkedHashSet::new))).collect(Collectors.toCollection(LinkedHashSet::new));
         Map<BuchiState<Integer>, Multimap<Set<Prop>, BuchiState<Integer>>> bTrans = transitions.entrySet().stream().collect(Collectors.toMap(e -> new BuchiState<>(e.getKey().getTag()), e -> {
             Set<AbstractMap.SimpleEntry<Set<Prop>, BuchiState<Integer>>> t = e.getValue().stream().flatMap(s ->
                     l.getOrDefault(s, Collections.emptyList())
                             .stream()
-                            .map(b -> new AbstractMap.SimpleEntry<>(b, new BuchiState<>(s.getTag())))).collect(Collectors.toSet());
+                            .map(b -> new AbstractMap.SimpleEntry<>(b, new BuchiState<>(s.getTag())))).collect(Collectors.toCollection(LinkedHashSet::new));
             ImmutableMultimap.Builder<Set<Prop>, BuchiState<Integer>> builder = new ImmutableListMultimap.Builder<>();
             t.forEach(h -> builder.put(h.getKey(), h.getValue()));
             return builder.build();
@@ -203,7 +203,7 @@ public class BuchiAutomate<S, T> {
         result.setInitState(initTemp);
         result.setTransitions(bTrans);
         Set<Set<BuchiState<Integer>>> temp = new LinkedHashSet<>();
-        temp.add(nodes.stream().map(s -> new BuchiState<>(s.getTag())).collect(Collectors.toSet()));
+        temp.add(nodes.stream().map(s -> new BuchiState<>(s.getTag())).collect(Collectors.toCollection(LinkedHashSet::new)));
         result.setAcceptingFamily(
                 acceptingFamily.isEmpty() ? temp : acceptingFamily
         );
@@ -234,7 +234,7 @@ public class BuchiAutomate<S, T> {
     }
 
 
-    private static List<Formula> curr1Rule(Formula f) {
+    private static List<Formula> law1(Formula f) {
         if (f instanceof Until) {
             return Collections.singletonList(((Until) f).left());
         }
@@ -247,24 +247,24 @@ public class BuchiAutomate<S, T> {
         throw new IllegalArgumentException();
     }
 
-    private static List<Formula> curr2Rule(Formula f) {
+    private static List<Formula> law2(Formula f) {
         if (f instanceof Until) {
-            return Stream.of(((Until) f).right()).collect(Collectors.toList());
+            return Collections.singletonList(((Until) f).right());
         }
         if (f instanceof Release) {
             return Stream.of(((Release) f).left(), ((Release) f).right()).collect(Collectors.toList());
         }
         if (f instanceof Or) {
-            return Stream.of(((Or) f).left()).collect(Collectors.toList());
+            return Collections.singletonList(((Or) f).left());
         }
         throw new IllegalArgumentException();
     }
 
 
-    private static void expand(Set<Formula> newFormulas,
-                               Set<Formula> oldFormulas,
-                               Set<Formula> next,
-                               Set<LtlBuchiState> incoming) {
+    private static void formulasToNodes(Set<Formula> newFormulas,
+                                        Set<Formula> oldFormulas,
+                                        Set<Formula> next,
+                                        Set<LtlBuchiState> incoming) {
         if (newFormulas.isEmpty()) {
             LtlBuchiState q = nodes.stream().filter(s -> Objects.equals(s.getNext(), next) && Objects.equals(s.getNow(), oldFormulas)).findFirst().orElse(null);
             if (Objects.nonNull(q)) {
@@ -272,7 +272,7 @@ public class BuchiAutomate<S, T> {
             } else {
                 LtlBuchiState n = new LtlBuchiState(nextTag++, incoming, oldFormulas, next);
                 nodes.add(n);
-                expand(next, Collections.emptySet(), Collections.emptySet(), Collections.singleton(n));
+                formulasToNodes(next, Collections.emptySet(), Collections.emptySet(), Collections.singleton(n));
             }
         } else {
             Formula f = newFormulas.stream().findFirst().orElse(null);
@@ -280,7 +280,7 @@ public class BuchiAutomate<S, T> {
             Set<Formula> toOld = add(oldFormulas, f);
             if (f instanceof TRUE || f instanceof FALSE || f instanceof Prop || f instanceof Not && ((Not) f).body() instanceof Prop) {
                 if (!(f instanceof FALSE) && !oldFormulas.contains(f.negation())) {
-                    expand(toNew, toOld, next, incoming);
+                    formulasToNodes(toNew, toOld, next, incoming);
                 }
             } else if (f instanceof And) {
                 Set<Formula> lrSet = new LinkedHashSet<>(toNew);
@@ -289,24 +289,24 @@ public class BuchiAutomate<S, T> {
                 toMinus.add(((And) f).right());
                 toMinus.removeAll(toOld);
                 lrSet.addAll(toMinus);
-                expand(lrSet, toOld, next, incoming);
+                formulasToNodes(lrSet, toOld, next, incoming);
             } else if (f instanceof Next) {
-                expand(toNew, toOld, add(next, ((Next) f).body()), incoming);
+                formulasToNodes(toNew, toOld, add(next, ((Next) f).body()), incoming);
             } else if (f instanceof Or || f instanceof Until || f instanceof Release) {
-                Set<Formula> set1 = plus(toNew, minus(new LinkedHashSet<>(curr1Rule(f)), oldFormulas));
+                Set<Formula> set1 = plus(toNew, minus(new LinkedHashSet<>(law1(f)), oldFormulas));
 
-                Set<Formula> set2 = plus(toNew, minus(new LinkedHashSet<>(curr2Rule(f)), oldFormulas));
+                Set<Formula> set2 = plus(toNew, minus(new LinkedHashSet<>(law2(f)), oldFormulas));
 
                 Set<Formula> newFs = new LinkedHashSet<>(next);
                 newFs.addAll(next1Rule(f));
-                expand(set1, toOld, newFs, incoming);
-                expand(set2, toOld, next, incoming);
+                formulasToNodes(set1, toOld, newFs, incoming);
+                formulasToNodes(set2, toOld, next, incoming);
             }
         }
     }
 
-    public static <A, B> BuchiAutomate<Pair<BuchiState<A>, BuchiState<B>>, Set<Prop>> cross(BuchiAutomate<A, Set<Prop>> aa, BuchiAutomate<B, Set<Prop>> xx, Set<Prop> props) {
-        val nodes = aa.nodes().stream().flatMap(a -> xx.nodes().stream().map(x -> new BuchiState<>(Pair.of(a, x)))).collect(Collectors.toList());
+    public static <A, B> BuchiAutomate<Pair<BuchiState<A>, BuchiState<B>>, Set<Prop>> intersect(BuchiAutomate<A, Set<Prop>> left, BuchiAutomate<B, Set<Prop>> right, Set<Prop> props) {
+        val nodes = left.nodes().stream().flatMap(a -> right.nodes().stream().map(x -> new BuchiState<>(Pair.of(a, x)))).collect(Collectors.toList());
         Map<BuchiState<Pair<BuchiState<A>, BuchiState<B>>>, Multimap<Set<Prop>, BuchiState<Pair<BuchiState<A>, BuchiState<B>>>>> transitions = new HashMap<>();
 
         for (val ax: nodes) {
@@ -314,8 +314,8 @@ public class BuchiAutomate<S, T> {
             List<Pair<Set<Prop>, BuchiState<Pair<BuchiState<A>, BuchiState<B>>>>> to = nodes.stream().flatMap(
                     by -> {
                         Pair<BuchiState<A>, BuchiState<B>> t = by.getTag();
-                        val abL = aa.getTransitions().get(pair.getKey()).entries().stream().filter(e -> e.getValue().equals(t.getKey())).map(Map.Entry::getKey).collect(Collectors.toSet());
-                        val xyL = xx.getTransitions().get(pair.getValue()).entries().stream().filter(e -> e.getValue().equals(t.getValue())).map(Map.Entry::getKey).collect(Collectors.toSet());
+                        val abL = left.getTransitions().get(pair.getKey()).entries().stream().filter(e -> e.getValue().equals(t.getKey())).map(Map.Entry::getKey).collect(Collectors.toCollection(LinkedHashSet::new));
+                        val xyL = right.getTransitions().get(pair.getValue()).entries().stream().filter(e -> e.getValue().equals(t.getValue())).map(Map.Entry::getKey).collect(Collectors.toCollection(LinkedHashSet::new));
                         val result = abL.stream().filter(sp -> !xyL.isEmpty() && xyL.contains(minus(sp, props))).map(tag -> Pair.of(tag, by)).collect(Collectors.toList());
                         return result.stream();
                     }
@@ -329,12 +329,12 @@ public class BuchiAutomate<S, T> {
         val init = nodes.stream().filter(
                 node -> {
                     val pair = node.getTag();
-                    return aa.getInitState().equals(pair.getKey()) && xx.getInitState().equals(pair.getValue());
+                    return left.getInitState().equals(pair.getKey()) && right.getInitState().equals(pair.getValue());
                 }
         ).findFirst().orElse(null);
-        Set<Set<BuchiState<Pair<BuchiState<A>, BuchiState<B>>>>> acc = xx.getAcceptingFamily().stream().map(
-                f -> nodes.stream().filter(n -> f.contains(n.getTag().getRight())).collect(Collectors.toSet())
-        ).collect(Collectors.toSet());
+        Set<Set<BuchiState<Pair<BuchiState<A>, BuchiState<B>>>>> acc = right.getAcceptingFamily().stream().map(
+                f -> nodes.stream().filter(n -> f.contains(n.getTag().getRight())).collect(Collectors.toCollection(LinkedHashSet::new))
+        ).collect(Collectors.toCollection(LinkedHashSet::new));
 
         BuchiAutomate<Pair<BuchiState<A>, BuchiState<B>>, Set<Prop>> result = new BuchiAutomate<>();
         result.initState = init;
