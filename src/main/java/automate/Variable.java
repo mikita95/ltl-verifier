@@ -8,10 +8,7 @@ import lombok.Setter;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.lang.Nullable;
 
-import java.util.AbstractMap;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Data(staticConstructor = "of")
@@ -46,5 +43,23 @@ public class Variable {
                 .map(diagram.Variable::getDeclaration)
                 .map(Variable::parseDeclaration)
                 .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue));
+    }
+
+    public String toString() {
+        return name;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Variable variable = (Variable) o;
+        return isVolatile == variable.isVolatile &&
+                Objects.equals(name, variable.name);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, isVolatile);
     }
 }

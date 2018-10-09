@@ -35,78 +35,74 @@ public class ModelKripke {
                 ));
 
         final StateKripke initState = StateKripke.of(Collections.singleton(Variable.of(automate.getInitState().getName(), false)));
-        final Set<StateKripke> resultStates = new HashSet<>();
+        final Set<StateKripke> resultStates = new LinkedHashSet<>();
         resultStates.add(initState);
         final Map<StateKripke, Set<StateKripke>> resultTransitions = new HashMap<>();
 
-        boolean changed = false;
+        boolean changed;
 
         do {
             changed = false;
-            Set<StateKripke> tempSet = new HashSet<>();
-            for (StateKripke b : resultStates) {
+            for (StateKripke b : new LinkedHashSet<>(resultStates)) {
                 Set<Variable> variables = b.getVariables();
                 if (Objects.isNull(variables)) {
                     continue;
                 }
-                final State s = variables.stream()
-                        .map(q -> automate.getStates().values().stream().filter(st -> StringUtils.equals(st.getName(), q.getName())).findFirst())
-                        .filter(Optional::isPresent)
-                        .map(Optional::get)
-                        .findFirst()
-                        .orElse(null);
+                final List<State> sList = variables.stream()
+                        .map(q -> automate.getStates().values().stream().filter(st -> StringUtils.equals(st.getName(), q.getName())).findFirst().orElse(null))
+                        .collect(Collectors.toList());
 
-                if (Objects.isNull(s)) {
+                if (sList.size() != 1) {
                     continue;
                 }
+                final State s = sList.get(0);
 
-                final List<StateEvent> possibleTransitions = transitions.getOrDefault(s, null);
+                final List<StateEvent> possibleTransitions = transitions.getOrDefault(s, Collections.emptyList());
 
                 for (StateEvent stateEvent : possibleTransitions) {
                     StateKripke lastState = b;
 
-                    final List<Set<Variable>> innerWorlds = stateEvent.getActions().stream()
+                    final List<Set<Variable>> innerWorlds = new ArrayList<>();
+                    innerWorlds.add(ImmutableSet.of(
+                            Variable.of(s.getName()),
+                            Variable.of(stateEvent.getEvent().getName())));
+
+                    innerWorlds.addAll(stateEvent.getActions().stream()
                             .map(action -> ImmutableSet.of(
                                     Variable.of(s.getName()),
                                     Variable.of(stateEvent.getEvent().getName()),
                                     Variable.of(action.getName())
                                     )
-                            ).collect(Collectors.toList());
-
-                    innerWorlds.add(ImmutableSet.of(
-                            Variable.of(s.getName()),
-                            Variable.of(stateEvent.getEvent().getName())));
-
+                            ).collect(Collectors.toList()));
 
                     for (Set<Variable> innerWorld : innerWorlds) {
                         final StateKripke innerState = StateKripke.of(innerWorld);
 
-                        if (new HashSet<>(resultStates).stream().noneMatch(stateKripke -> stateKripke.getVariables().equals(innerWorld))) {
-                            tempSet.add(innerState);
+                        if (resultStates.stream().noneMatch(stateKripke -> stateKripke.getVariables().equals(innerWorld))) {
+                            resultStates.add(innerState);
                             changed = true;
                         }
 
-                        resultTransitions.putIfAbsent(lastState, new HashSet<>());
-                        resultTransitions.get(lastState).add(initState);
+                        resultTransitions.putIfAbsent(lastState, new LinkedHashSet<>());
+                        resultTransitions.get(lastState).add(innerState);
 
-                        lastState = initState;
+                        lastState = innerState;
                     }
 
                     final Set<Variable> toWorld = ImmutableSet.of(Variable.of(stateEvent.getState().getName()));
                     final StateKripke toState = StateKripke.of(toWorld);
 
-                    if (new HashSet<>(resultStates).stream().noneMatch(stateKripke -> stateKripke.getVariables().equals(toWorld))) {
-                        tempSet.add(toState);
+                    if (resultStates.stream().noneMatch(stateKripke -> stateKripke.getVariables().equals(toWorld))) {
+                        resultStates.add(toState);
                         changed = true;
                     }
 
-                    resultTransitions.putIfAbsent(lastState, new HashSet<>());
+                    resultTransitions.putIfAbsent(lastState, new LinkedHashSet<>());
                     resultTransitions.get(lastState).add(toState);
                 }
 
 
             }
-            resultStates.addAll(tempSet);
         } while (changed);
         return ModelKripke.of(
                 resultStates,

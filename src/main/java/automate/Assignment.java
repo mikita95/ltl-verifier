@@ -23,7 +23,7 @@ public class Assignment {
         if (StringUtils.isEmpty(code))
             return Collections.emptyList();
         return Arrays.stream(code.split("\\r?\\n"))
-                .filter(StringUtils::isEmpty)
+                .filter(StringUtils::isNoneEmpty)
                 .flatMap(line -> {
                     final String[] assign = StringUtils.removeEnd(line.trim(), ";").split("\\s+=\\s+");
                     return variableSet.stream()

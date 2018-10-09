@@ -21,9 +21,46 @@ trait Formula {
     }
   }
 
+  override def equals(obj: scala.Any): Boolean = obj match {
+    case obj: Formula => obj.toString == this.toString
+    case _ => false
+  }
+
+  override def hashCode: Int = this.toString.hashCode
+
+  override def toString: String = this match {
+    case p: Prop => p.name
+    case p: And => s"(${p.left}) & (${p.right})"
+    case p: Or => s"(${p.left}) | (${p.right})"
+    case p: Impl => s"${p.left} -> ${p.right}"
+    case p: Until => s"(${p.left}) U (${p.right})"
+    case p: Release =>  s"(${p.left}) R (${p.right})"
+    case p: Future => s"F(${p.body})"
+    case p: Global => s"G(${p.body})"
+    case p: Next => s"X(${p.body})"
+    case p: Not => s"!(${p.body})"
+    case p: TRUE => "true"
+    case p: FALSE => "false"
+    case _ => "unknown"
+  }
+
   def subformulasJava(): java.util.Set[Formula] = subformulas.asJava
 
-  def variables(): Set[Prop] = Set()
+  def variables(): Set[Prop] = this match {
+    case p: Prop => Set(p)
+    case p: And => p.left.variables() ++ p.right.variables()
+    case p: Or => p.left.variables() ++ p.right.variables()
+    case p: Impl => p.left.variables() ++ p.right.variables()
+    case p: Until => p.left.variables() ++ p.right.variables()
+    case p: Release => p.left.variables() ++ p.right.variables()
+    case p: Future => p.body.variables()
+    case p: Global => p.body.variables()
+    case p: Next => p.body.variables()
+    case p: Not => p.body.variables()
+    case p: TRUE => Set()
+    case p: FALSE => Set()
+    case _ => Set()
+  }
   def varsJava(): java.util.Set[Prop] = variables().asJava
 
   def getBody: Formula = this match {

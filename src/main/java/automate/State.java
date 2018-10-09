@@ -57,4 +57,18 @@ public class State {
                 getEdges(widget, edges, Attributes::getIncoming),
                 getEdges(widget, edges, Attributes::getOutgoing));
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        State state = (State) o;
+        return Objects.equals(id, state.id);
+    }
+
+    @Override
+    public int hashCode() {
+
+        return Objects.hash(id);
+    }
 }

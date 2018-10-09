@@ -23,4 +23,8 @@ public class LtlBuchiState extends BuchiState<Integer> {
         this.now = now;
         this.next = next;
     }
+
+    public String toString() {
+        return String.valueOf(id);
+    }
 }

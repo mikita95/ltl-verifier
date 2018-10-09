@@ -1,4 +1,5 @@
-package ltl;// Generated from C:/Users/yegres/IdeaProjects/ltl-verifier/src/main/antlr4\Ltl.g4 by ANTLR 4.7
+// Generated from /home/nikita/development/ltl-verifier/src/main/antlr4/Ltl.g4 by ANTLR 4.7
+package ltl;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 
 /**

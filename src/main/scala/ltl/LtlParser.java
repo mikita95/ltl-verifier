@@ -1,4 +1,5 @@
-package ltl;// Generated from C:/Users/yegres/IdeaProjects/ltl-verifier/src/main/antlr4\Ltl.g4 by ANTLR 4.7
+// Generated from /home/nikita/development/ltl-verifier/src/main/antlr4/Ltl.g4 by ANTLR 4.7
+package ltl;
 
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.atn.ATN;
@@ -29,8 +30,8 @@ public class LtlParser extends Parser {
 	};
 
 	private static final String[] _LITERAL_NAMES = {
-		null, "'('", "')'", "'!'", "'X'", "'F'", "'G'", "'U'", "'R'", "'&'",
-		"'|'", "'->'"
+		null, "'('", "')'", "'!'", "'X'", "'F'", "'G'", "'U'", "'R'", "'&'", "'|'", 
+		"'->'"
 	};
 	private static final String[] _SYMBOLIC_NAMES = {
 		null, null, null, null, null, null, null, null, null, null, null, null, 
@@ -447,7 +448,7 @@ public class LtlParser extends Parser {
 			setState(36);
 			_errHandler.sync(this);
 			_alt = getInterpreter().adaptivePredict(_input,2,_ctx);
-			while ( _alt!=2 && _alt!=ATN.INVALID_ALT_NUMBER ) {
+			while ( _alt!=2 && _alt!=org.antlr.v4.runtime.atn.ATN.INVALID_ALT_NUMBER ) {
 				if ( _alt==1 ) {
 					if ( _parseListeners!=null ) triggerExitRuleEvent();
 					_prevctx = _localctx;
@@ -564,13 +565,13 @@ public class LtlParser extends Parser {
 	}
 
 	public static final String _serializedATN =
-		"\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\21*\4\2\t\2\3\2\3"+
+		"\3\u608b\ua72a\u8133\ub9ed\u417c\u3be7\u7786\u5964\3\20*\4\2\t\2\3\2\3"+
 		"\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\5\2\24\n\2\3\2"+
 		"\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\3\2\7\2%\n\2\f\2"+
 		"\16\2(\13\2\3\2\2\3\2\3\2\2\2\2\63\2\23\3\2\2\2\4\5\b\2\1\2\5\6\7\3\2"+
 		"\2\6\7\5\2\2\2\7\b\7\4\2\2\b\24\3\2\2\2\t\n\7\5\2\2\n\24\5\2\2\r\13\f"+
 		"\7\6\2\2\f\24\5\2\2\f\r\16\7\7\2\2\16\24\5\2\2\13\17\20\7\b\2\2\20\24"+
-		"\5\2\2\n\21\24\7\20\2\2\22\24\7\16\2\2\23\4\3\2\2\2\23\t\3\2\2\2\23\13"+
+		"\5\2\2\n\21\24\7\17\2\2\22\24\7\16\2\2\23\4\3\2\2\2\23\t\3\2\2\2\23\13"+
 		"\3\2\2\2\23\r\3\2\2\2\23\17\3\2\2\2\23\21\3\2\2\2\23\22\3\2\2\2\24&\3"+
 		"\2\2\2\25\26\f\t\2\2\26\27\7\t\2\2\27%\5\2\2\n\30\31\f\b\2\2\31\32\7\n"+
 		"\2\2\32%\5\2\2\t\33\34\f\7\2\2\34\35\7\13\2\2\35%\5\2\2\b\36\37\f\6\2"+

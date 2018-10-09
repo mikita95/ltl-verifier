@@ -1,12 +1,12 @@
 import automate.DiagramAutomate;
 import automate.Variable;
 import buchi.BuchiAutomate;
+import buchi.BuchiAutomateCycleFinder;
 import buchi.BuchiState;
 import diagram.Diagram;
 import diagram.Parser;
 import kripke.ModelKripke;
 import kripke.StateKripke;
-import lombok.val;
 import ltl.Formula;
 import ltl.ParserRunner;
 import ltl.Prop;
@@ -14,7 +14,9 @@ import org.apache.commons.cli.*;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -22,13 +24,6 @@ import java.util.stream.Collectors;
 
 public class Verifier {
     public static void main(String[] args) throws IOException {
-/*        Parser parser = new Parser();
-        final Diagram d = parser.parse(Paths.get("/home/nikita/development/ltl/src/main/resources/diagram1.xml"));
-        final DiagramAutomate diagramAutomate = DiagramAutomate.fromDiagram(d);
-        System.out.println(d.toString());
-        System.out.println(d.getName());
-        System.out.println(diagramAutomate.toString());
-        ParserRunner.parseFormula("q");*/
         Options options = new Options();
 
         Option xmlOption = new Option("x", "xml", true, "xml file path");
@@ -36,7 +31,6 @@ public class Verifier {
         options.addOption(xmlOption);
 
         Option formulaOption = new Option("f", "formula", true, "ltl-formula");
-        formulaOption.setRequired(true);
         options.addOption(formulaOption);
 
         Option ltlOption = new Option("l", "file", true, "ltl-file path");
@@ -56,19 +50,31 @@ public class Verifier {
         String xmlFilePath = cmd.getOptionValue("xml");
         String ltlFormula = cmd.getOptionValue("formula");
         String ltlFilePath = cmd.getOptionValue("file");
-
-        Parser diagramParser = new Parser();
-        final Diagram d = diagramParser.parse(Paths.get(xmlFilePath));
-
+        final Diagram d;
+        try {
+            Parser diagramParser = new Parser();
+            d = diagramParser.parse(Paths.get(xmlFilePath));
+        } catch (Exception e) {
+            System.out.println("Unable to parse diagram file:" + xmlFilePath);
+            return;
+        }
         if (ltlFilePath != null) {
-
+            System.out.println(Files.lines(Paths.get(ltlFilePath)).map(line -> handleFormulaLine(d, line)).collect(Collectors.joining("\n\n")));
         } else {
-            final Formula formula = ParserRunner.parseFormula(ltlFormula);
+            System.out.println(handleFormulaLine(d, ltlFormula));
+        }
+    }
+
+    private static String handleFormulaLine(Diagram d, String line) {
+        try {
+            final Formula formula = ParserRunner.parseFormula(line);
             final Optional<List<BuchiState<Pair<BuchiState<StateKripke>, BuchiState<Integer>>>>> result = runVerification(d, formula);
             final Result printableResult = result.map(Result::fail).orElseGet(Result::correct);
-            System.out.println(printableResult.print());
+            return String.format("Formula: %s\n%s", line, printableResult.print());
+        } catch (Throwable e) {
+            return String.format("Formula: %s\n%s", line, "Unable to verify");
         }
-     }
+    }
 
     private static Optional<List<BuchiState<Pair<BuchiState<StateKripke>, BuchiState<Integer>>>>>
     runVerification(Diagram diagram, Formula formula) {
@@ -89,10 +95,11 @@ public class Verifier {
 
         Set<Prop> props = buchiProp.getTransitions().entrySet().stream().flatMap(
                 x -> x.getValue().entries().stream().flatMap(y -> y.getKey().stream())
-        ).collect(Collectors.toSet());
+        ).collect(Collectors.toCollection(LinkedHashSet::new));
         props.removeAll(nnf.varsJava());
-        val cross = BuchiAutomate.cross(buchiProp, buchiForLtl, props);
-        val cycle = BuchiAutomate.findReachableCycle(cross);
+        BuchiAutomate<Pair<BuchiState<StateKripke>, BuchiState<Integer>>, Set<Prop>> cross = BuchiAutomate.cross(buchiProp, buchiForLtl, props);
+        List<BuchiState<Pair<BuchiState<StateKripke>, BuchiState<Integer>>>> cycle =
+                new BuchiAutomateCycleFinder<Pair<BuchiState<StateKripke>, BuchiState<Integer>>>().findReachableCycle(cross);
 
         return Optional.ofNullable(cycle);
     }

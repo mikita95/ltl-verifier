@@ -25,6 +25,7 @@ public class BuchiAutomate<S, T> {
     private BuchiState<S> initState;
     private Map<BuchiState<S>, Multimap<T, BuchiState<S>>> transitions;
     private Set<Set<BuchiState<S>>> acceptingFamily;
+    private static Integer nextTag = 1;
 
     public BuchiAutomate() {
 
@@ -76,7 +77,7 @@ public class BuchiAutomate<S, T> {
             final ImmutableMultimap.Builder<Set<Prop>, BuchiState<E>> builder = ImmutableMultimap.builder();
             map.entries()
                     .forEach(edge -> builder.put(
-                            edge.getKey().stream().map(v -> new Prop(v.getName())).collect(Collectors.toSet()),
+                            new LinkedHashSet<>(edge.getKey().stream().map(v -> new Prop(v.getName())).collect(Collectors.toList())),
                             edge.getValue()
                     ));
 
@@ -97,7 +98,7 @@ public class BuchiAutomate<S, T> {
         }
 
         List<Set<BuchiState<S>>> fs = new ArrayList<>(buchiAutomate.getAcceptingFamily());
-        List<TagedBuchiState<S>> newStates = IntStream.of(fs.size()).boxed().flatMap(layer ->
+        List<TagedBuchiState<S>> newStates = IntStream.range(0, fs.size()).boxed().flatMap(layer ->
                 buchiAutomate.nodes().stream().map(state -> new TagedBuchiState<>(layer, state))
         ).collect(Collectors.toList());
 
@@ -132,94 +133,19 @@ public class BuchiAutomate<S, T> {
         return result;
     }
 
-    private enum Color {
-        WHITE,
-        GREY,
-        BLACK
-    }
-
-    public static <T, E> List<BuchiState<E>> findReachableCycle(BuchiAutomate<E, T> buchiAutomate) {
-        final Set<BuchiState<E>> accepting = buchiAutomate.getAcceptingFamily().stream().findFirst().orElse(null);
-
-        Deque<BuchiState<E>> nodesStack = new ArrayDeque<>();
-        Map<BuchiState<E>, Color> colors = buchiAutomate.nodes().stream().collect(Collectors.toMap(
-                Function.identity(),
-                k -> Color.WHITE
-        ));
-        Map<BuchiState<E>, Color> colors2 = new HashMap<>(colors);
-
-        try {
-            dfsOuter(buchiAutomate, accepting, colors, colors2, buchiAutomate.getInitState(), nodesStack);
-        } catch (Exception e) {
-            return new ArrayList<>(nodesStack);
-        }
-
-        return null;
-    }
-
     private static <K> List<Set<K>> allSubsets(Set<K> set) {
-        return StreamEx.of(set).foldLeft(Collections.singletonList(new HashSet<>()),
+        return StreamEx.of(set).foldLeft(Collections.singletonList(new LinkedHashSet<>()),
                 (p, c) -> BuchiAutomate.<Set<K>>plusL(p, p.stream().map(n -> plus(n, c)).collect(Collectors.toList())));
     }
 
-   /* fun <T> allSubsets(set: Set<T>): List<Set<T>> =
-            set.fold(listOf(emptySet<T>())) { prevSets, item -> prevSets + prevSets.map { it + item } }*/
 
-    private static <U, E> void dfsInner(BuchiAutomate<E, U> automate, Set<BuchiState<E>> accepting, Map<BuchiState<E>, Color> colors, BuchiState<E> from, Deque<BuchiState<E>> nodesStack) {
-        if (colors.get(from) == Color.BLACK || colors.get(from) == Color.GREY) {
-            return;
-        }
-
-        dfsInner(colors, from, () -> {
-            for (Map.Entry<U, BuchiState<E>> entry : automate.getTransitions().get(from).entries()) {
-                if (accepting.contains(entry.getValue()) && colors.get(entry.getValue()) == Color.GREY) {
-                    nodesStack.add(entry.getValue());
-                    throw new RuntimeException("");
-                } else {
-                    dfsInner(automate, accepting, colors, entry.getValue(), nodesStack);
-                }
-            }
-        }, nodesStack);
-    }
-
-    private static <U, E> void dfsOuter(BuchiAutomate<E, U> automate, Set<BuchiState<E>> accepting, Map<BuchiState<E>, Color> colors, Map<BuchiState<E>, Color> colors2, BuchiState<E> from, Deque<BuchiState<E>> nodesStack) {
-        if (colors.get(from) == Color.BLACK || colors.get(from) == Color.GREY) {
-            return;
-        }
-
-        dfsInner(colors, from, () -> {
-            for (Map.Entry<U, BuchiState<E>> entry : automate.getTransitions().get(from).entries()) {
-                if (accepting.contains(from)) {
-                    final Map<BuchiState<E>, Color> colorsB = new HashMap<>(colors);
-                    colors.clear();
-                    colors.putAll(colors2);
-                    dfsInner(automate, accepting, colors, entry.getValue(), nodesStack);
-                    colors.putAll(colorsB);
-                }
-                if (accepting.contains(entry.getValue()) && colors.get(entry.getValue()) == Color.GREY) {
-                    nodesStack.add(entry.getValue());
-                    throw new RuntimeException("");
-                } else {
-                    dfsInner(automate, accepting, colors, entry.getValue(), nodesStack);
-                }
-            }
-        }, nodesStack);
-    }
-
-    private static <E> void dfsInner(Map<BuchiState<E>, Color> colors, BuchiState<E> item, Runnable body, Deque<BuchiState<E>> nodesStack) {
-        nodesStack.add(item);
-        colors.put(item, Color.GREY);
-        body.run();
-        colors.put(item, Color.BLACK);
-        assert Objects.equals(nodesStack.pop(), item);
-    }
+    private static Set<LtlBuchiState> nodes;
 
     public static BuchiAutomate<Integer, Set<Prop>> of(Formula ltlFormula) {
-        Set<LtlBuchiState> nodes = new HashSet<>();
-
-        int nextTag = 1;
+        nodes = new LinkedHashSet<>();
+        nextTag = 1;
         LtlBuchiState init = new LtlBuchiState(0, Collections.emptySet(), Collections.emptySet(), Collections.emptySet());
-        expand(nextTag, nodes, ImmutableSet.of(ltlFormula), Collections.emptySet(), Collections.emptySet(), ImmutableSet.of(init));
+        expand(ImmutableSet.of(ltlFormula), Collections.emptySet(), Collections.emptySet(), ImmutableSet.of(init));
         Set<Prop> allVariables = ltlFormula.varsJava();
         Map<LtlBuchiState, Set<Prop>> apInNow = nodes.stream()
                 .collect(Collectors.toMap(
@@ -233,6 +159,9 @@ public class BuchiAutomate<S, T> {
            n -> minus(
                    allVariables,
                    n.getNow().stream()
+                           .filter(t -> t instanceof Not)
+                           .map(t -> (Not) t)
+                           .map(Not::body)
                            .filter(t -> t instanceof Prop)
                            .map(t -> (Prop) t)
                            .collect(Collectors.toSet())
@@ -273,7 +202,7 @@ public class BuchiAutomate<S, T> {
         BuchiState<Integer> initTemp = new BuchiState<>(init.getTag());
         result.setInitState(initTemp);
         result.setTransitions(bTrans);
-        Set<Set<BuchiState<Integer>>> temp = new HashSet<>();
+        Set<Set<BuchiState<Integer>>> temp = new LinkedHashSet<>();
         temp.add(nodes.stream().map(s -> new BuchiState<>(s.getTag())).collect(Collectors.toSet()));
         result.setAcceptingFamily(
                 acceptingFamily.isEmpty() ? temp : acceptingFamily
@@ -283,113 +212,114 @@ public class BuchiAutomate<S, T> {
     }
 
     private static <X> Set<X> add(Set<X> set, X element) {
-        return Streams.concat(
-                set.stream(),
-                Stream.of(element)
-        ).collect(Collectors.toSet());
+        Set<X> result = new LinkedHashSet<>(set);
+        result.add(element);
+        return result;
     }
 
     private static <X> Set<X> remove(Set<X> set, X element) {
-        return set.stream().filter(element::equals).collect(Collectors.toSet());
+        HashSet<X> result = new LinkedHashSet<>(set);
+        result.remove(element);
+        return result;
     }
 
-    private static Set<Formula> next1Rule(Formula f) {
+    private static List<Formula> next1Rule(Formula f) {
         if (f instanceof Until || f instanceof Release) {
-            return Stream.of(f).collect(Collectors.toSet());
+            return Collections.singletonList(f);
         }
         if (f instanceof Or) {
-            return Collections.emptySet();
+            return Collections.emptyList();
         }
         throw new IllegalArgumentException();
     }
 
 
-    private static Set<Formula> curr1Rule(Formula f) {
+    private static List<Formula> curr1Rule(Formula f) {
         if (f instanceof Until) {
-            return Stream.of(((Until) f).left()).collect(Collectors.toSet());
+            return Collections.singletonList(((Until) f).left());
         }
         if (f instanceof Release) {
-            return Stream.of(((Release) f).right()).collect(Collectors.toSet());
+            return Collections.singletonList(((Release) f).right());
         }
         if (f instanceof Or) {
-            return Stream.of(((Or) f).right()).collect(Collectors.toSet());
+            return Collections.singletonList(((Or) f).right());
         }
         throw new IllegalArgumentException();
     }
 
-    private static Set<Formula> curr2Rule(Formula f) {
+    private static List<Formula> curr2Rule(Formula f) {
         if (f instanceof Until) {
-            return Stream.of(((Until) f).right()).collect(Collectors.toSet());
+            return Stream.of(((Until) f).right()).collect(Collectors.toList());
         }
         if (f instanceof Release) {
-            return Stream.of(((Release) f).left(), ((Release) f).right()).collect(Collectors.toSet());
+            return Stream.of(((Release) f).left(), ((Release) f).right()).collect(Collectors.toList());
         }
         if (f instanceof Or) {
-            return Stream.of(((Or) f).left()).collect(Collectors.toSet());
+            return Stream.of(((Or) f).left()).collect(Collectors.toList());
         }
         throw new IllegalArgumentException();
     }
 
 
-    private static void expand(Integer nextTag,
-                               Set<LtlBuchiState> nodes,
-                               Set<Formula> newFormulas,
+    private static void expand(Set<Formula> newFormulas,
                                Set<Formula> oldFormulas,
                                Set<Formula> next,
                                Set<LtlBuchiState> incoming) {
         if (newFormulas.isEmpty()) {
             LtlBuchiState q = nodes.stream().filter(s -> Objects.equals(s.getNext(), next) && Objects.equals(s.getNow(), oldFormulas)).findFirst().orElse(null);
             if (Objects.nonNull(q)) {
-                q.getIncoming().addAll(incoming);
+                q.setIncoming(plus(q.getIncoming(), incoming));
             } else {
                 LtlBuchiState n = new LtlBuchiState(nextTag++, incoming, oldFormulas, next);
                 nodes.add(n);
-                expand(nextTag, nodes, next, Collections.emptySet(), Collections.emptySet(), Collections.singleton(n));
+                expand(next, Collections.emptySet(), Collections.emptySet(), Collections.singleton(n));
             }
         } else {
             Formula f = newFormulas.stream().findFirst().orElse(null);
             Set<Formula> toNew = remove(newFormulas, f);
             Set<Formula> toOld = add(oldFormulas, f);
-            if (f instanceof TRUE || f instanceof FALSE || f instanceof Prop || f instanceof Not && f.getBody() instanceof Prop) {
+            if (f instanceof TRUE || f instanceof FALSE || f instanceof Prop || f instanceof Not && ((Not) f).body() instanceof Prop) {
                 if (!(f instanceof FALSE) && !oldFormulas.contains(f.negation())) {
-                    expand(nextTag, nodes, toNew, toOld, next, incoming);
+                    expand(toNew, toOld, next, incoming);
                 }
             } else if (f instanceof And) {
-                Set<Formula> lrSet = Stream.of(((And) f).left(), ((And) f).right()).collect(Collectors.toSet());
-                lrSet.removeAll(toOld);
-                lrSet.addAll(toNew);
-                expand(nextTag, nodes, lrSet, toOld, next, incoming);
+                Set<Formula> lrSet = new LinkedHashSet<>(toNew);
+                Set<Formula> toMinus = new LinkedHashSet<>();
+                toMinus.add(((And) f).left());
+                toMinus.add(((And) f).right());
+                toMinus.removeAll(toOld);
+                lrSet.addAll(toMinus);
+                expand(lrSet, toOld, next, incoming);
             } else if (f instanceof Next) {
-                expand(nextTag, nodes, toNew, toOld, add(next, ((Next) f).body()), incoming);
+                expand(toNew, toOld, add(next, ((Next) f).body()), incoming);
             } else if (f instanceof Or || f instanceof Until || f instanceof Release) {
-                Set<Formula> set1 = curr1Rule(f);
-                set1.removeAll(oldFormulas);
-                set1.addAll(toNew);
+                Set<Formula> set1 = plus(toNew, minus(new LinkedHashSet<>(curr1Rule(f)), oldFormulas));
 
-                Set<Formula> set2 = curr2Rule(f);
-                set1.removeAll(oldFormulas);
-                set1.addAll(toNew);
+                Set<Formula> set2 = plus(toNew, minus(new LinkedHashSet<>(curr2Rule(f)), oldFormulas));
 
-                expand(nextTag, nodes, set1, toOld, Stream.concat(next.stream(), next1Rule(f).stream()).collect(Collectors.toSet()), incoming);
-                expand(nextTag, nodes, set2, toOld, next, incoming);
+                Set<Formula> newFs = new LinkedHashSet<>(next);
+                newFs.addAll(next1Rule(f));
+                expand(set1, toOld, newFs, incoming);
+                expand(set2, toOld, next, incoming);
             }
         }
     }
 
     public static <A, B> BuchiAutomate<Pair<BuchiState<A>, BuchiState<B>>, Set<Prop>> cross(BuchiAutomate<A, Set<Prop>> aa, BuchiAutomate<B, Set<Prop>> xx, Set<Prop> props) {
-        val nodes = aa.nodes().stream().flatMap(a -> xx.nodes().stream().map(x -> new BuchiState<>(Pair.of(a, x)))).collect(Collectors.toSet());
+        val nodes = aa.nodes().stream().flatMap(a -> xx.nodes().stream().map(x -> new BuchiState<>(Pair.of(a, x)))).collect(Collectors.toList());
         Map<BuchiState<Pair<BuchiState<A>, BuchiState<B>>>, Multimap<Set<Prop>, BuchiState<Pair<BuchiState<A>, BuchiState<B>>>>> transitions = new HashMap<>();
 
         for (val ax: nodes) {
             Pair<BuchiState<A>, BuchiState<B>> pair = ax.getTag();
-            Set<Pair<Set<Prop>, BuchiState<Pair<BuchiState<A>, BuchiState<B>>>>> to = nodes.stream().flatMap(
+            List<Pair<Set<Prop>, BuchiState<Pair<BuchiState<A>, BuchiState<B>>>>> to = nodes.stream().flatMap(
                     by -> {
                         Pair<BuchiState<A>, BuchiState<B>> t = by.getTag();
                         val abL = aa.getTransitions().get(pair.getKey()).entries().stream().filter(e -> e.getValue().equals(t.getKey())).map(Map.Entry::getKey).collect(Collectors.toSet());
                         val xyL = xx.getTransitions().get(pair.getValue()).entries().stream().filter(e -> e.getValue().equals(t.getValue())).map(Map.Entry::getKey).collect(Collectors.toSet());
-                        return abL.stream().filter(sp -> xyL.containsAll(minus(sp, props))).map(tag -> Pair.of(tag, by));
+                        val result = abL.stream().filter(sp -> !xyL.isEmpty() && xyL.contains(minus(sp, props))).map(tag -> Pair.of(tag, by)).collect(Collectors.toList());
+                        return result.stream();
                     }
-            ).collect(Collectors.toSet());
+            ).collect(Collectors.toList());
 
             ImmutableMultimap.Builder<Set<Prop>, BuchiState<Pair<BuchiState<A>, BuchiState<B>>>> builder = new ImmutableListMultimap.Builder<>();
             to.forEach(p -> builder.put(p.getLeft(), p.getRight()));
@@ -409,33 +339,34 @@ public class BuchiAutomate<S, T> {
         BuchiAutomate<Pair<BuchiState<A>, BuchiState<B>>, Set<Prop>> result = new BuchiAutomate<>();
         result.initState = init;
         result.transitions = transitions;
+        result.acceptingFamily = acc;
 
         return result;
     }
 
     private static <A> Set<A> minus(Set<A> x, Set<A> y) {
         if (x == null || y == null) {
-            return new HashSet<>();
+            return new LinkedHashSet<>();
         }
-        Set<A> result = new HashSet<>(x);
+        Set<A> result = new LinkedHashSet<>(x);
         result.removeAll(y);
         return result;
     }
 
     private static <A> Set<A> plus(Set<A> x, Set<A> y) {
         if (x == null || y == null) {
-            return new HashSet<>();
+            return new LinkedHashSet<>();
         }
-        Set<A> result = new HashSet<>(x);
+        Set<A> result = new LinkedHashSet<>(x);
         result.addAll(y);
         return result;
     }
 
     private static <A> Set<A> plus(Set<A> x, A y) {
         if (x == null || y == null) {
-            return new HashSet<>();
+            return new LinkedHashSet<>();
         }
-        Set<A> result = new HashSet<>(x);
+        Set<A> result = new LinkedHashSet<>(x);
         result.add(y);
         return result;
     }
