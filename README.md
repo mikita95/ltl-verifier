@@ -1,6 +1,9 @@
 # ltl-verifier
 
 ## Usage
+### Packaging
+`mvn package`
+
 ### Jar
 Download: [verifier.jar](https://github.com/mikita95/ltl-verifier/releases/download/1.0/verifier.jar)
 
@@ -16,22 +19,22 @@ Download: [verifier.jar](https://github.com/mikita95/ltl-verifier/releases/downl
 ## Output example
 ```java -jar verifier.jar --xml=src/main/resources/diagram1.xml --file=src/main/resources/test1.txt```
 ```
-Formula: F(hal_init)
+Formula: F hal_init
 it is correct
 
-Formula: G(!(F(PRESTART)))
+Formula: G ! F(PRESTART)
 it is correct
 
-Formula: G(PRESTART -> (PRESTART) U (POWER_ON))
+Formula: G (PRESTART -> (PRESTART U POWER_ON))
 it is correct
 
-Formula: G((POWER_ON) & (CHG) -> (FLASH) U (POWER_ON))
+Formula: G ((POWER_ON & CHG) -> (FLASH U POWER_ON))
 it is correct
 
-Formula: G(hal_init -> F(tim4_enable))
+Formula: G (hal_init -> (F tim4_enable))
 it is correct
 
-Formula: G(F(PRESTART))
+Formula: G (F PRESTART)
 it is not correct
 path:
 Start
@@ -47,29 +50,26 @@ PRESTART, tick, pin_reset_s2
 PRESTART, tick, pin_reset_s3
 PRESTART, tick, delay_5000
 POWER_ON
-POWER_ON, CHG
-CPU_ON
-CPU_ON, CHG
-BAT_ONLY
-BAT_ONLY, CHG
-CPU_ON
-CPU_ON, CHG
+POWER_ON, TIMER
+SLEEP
+SLEEP, INTERRUPT
+POWER_ON
+POWER_ON, TIMER
+ cycle:
+POWER_ON
+SLEEP, INTERRUPT
+SLEEP
+POWER_ON, TIMER
 
-cycle:
-BAT_ONLY
-BAT_ONLY, CHG
-CPU_ON
-CPU_ON, CHG
-
-Formula: G(SLEEP -> F(POWER_ON))
+Formula: G (SLEEP -> (F POWER_ON))
 it is correct
 
-Formula: G(hal_init -> X(tim4_enable))
+Formula: G (hal_init -> (X tim4_enable))
 it is correct
 
-Formula: G(pin_reset_s1 -> X(pin_reset_s2))
+Formula: G (pin_reset_s1 -> (X pin_reset_s2))
 it is correct
 
-Formula: G(pin_reset_s2 -> X(pin_reset_s3))
+Formula: G (pin_reset_s2 -> (X pin_reset_s3))
 it is correct
 ```
